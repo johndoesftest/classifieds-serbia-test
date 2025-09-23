@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
-import { Page, Category } from '../types';
-import { CATEGORIES, MOCK_LISTINGS } from '../constants';
+import { Page, Category, Listing } from '../types';
+import { CATEGORIES } from '../constants';
 import ListingCard from '../components/ListingCard';
 import { 
     SearchIcon, 
@@ -16,6 +15,7 @@ import {
 
 interface HomePageProps {
   onNavigate: (page: Page) => void;
+  listings: Listing[];
 }
 
 const CategoryCard: React.FC<{ category: Category; onClick: () => void }> = ({ category, onClick }) => (
@@ -178,7 +178,7 @@ const CtaSection: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate
 );
 
 
-const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
+const HomePage: React.FC<HomePageProps> = ({ onNavigate, listings }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const handleSearch = (e: React.FormEvent) => {
@@ -186,15 +186,15 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         onNavigate({ name: 'listings', filters: { searchTerm } });
     };
 
-    const latestListings = [...MOCK_LISTINGS]
+    const latestListings = [...listings]
       .sort((a, b) => new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime())
       .slice(0, 4);
       
-    const carListings = MOCK_LISTINGS
+    const carListings = listings
       .filter(l => l.category === 'automobili')
       .slice(0, 4);
       
-    const realEstateListings = MOCK_LISTINGS
+    const realEstateListings = listings
       .filter(l => l.category === 'nekretnine')
       .slice(0, 4);
 

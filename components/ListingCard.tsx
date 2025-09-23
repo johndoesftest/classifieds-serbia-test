@@ -1,22 +1,42 @@
 
+
 import React from 'react';
 import { Listing, Page } from '../types';
+import { TrashIcon } from './Icons';
 
 interface ListingCardProps {
   listing: Listing;
   onNavigate: (page: Page) => void;
+  isOwner?: boolean;
+  onDelete?: (listingId: string) => void;
 }
 
-const ListingCard: React.FC<ListingCardProps> = ({ listing, onNavigate }) => {
+const ListingCard: React.FC<ListingCardProps> = ({ listing, onNavigate, isOwner = false, onDelete }) => {
   const formattedPrice = listing.price > 0 
     ? new Intl.NumberFormat('de-DE').format(listing.price) + ` ${listing.currency}` 
     : 'Po dogovoru';
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card's onClick from firing
+    if (onDelete) {
+      onDelete(listing.id);
+    }
+  };
+
   return (
     <div 
-      className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col"
+      className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col relative"
       onClick={() => onNavigate({ name: 'detail', id: listing.id })}
     >
+      {isOwner && onDelete && (
+        <button
+          onClick={handleDeleteClick}
+          className="absolute top-2 right-2 z-10 p-1.5 bg-red-600 text-white rounded-full shadow-md hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          aria-label="Obriši oglas"
+        >
+          <TrashIcon className="h-4 w-4" />
+        </button>
+      )}
       <div className="relative h-48">
         <img src={listing.images[0]} alt={listing.title} className="w-full h-full object-cover" />
         <span className="absolute top-2 left-2 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">{listing.location}</span>
@@ -36,4 +56,3 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onNavigate }) => {
 };
 
 export default ListingCard;
-   

@@ -10,35 +10,48 @@ import LoginPage from './pages/LoginPage';
 import RegistrationPage from './pages/RegistrationPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import UserProfilePage from './pages/UserProfilePage';
 import { Page, Listing, User } from './types';
-import { MOCK_LISTINGS } from './constants';
 import { getCurrentUser, logout } from './services/authService';
+import { getAllListings, addNewListing, deleteListing } from './data/listings';
+import Spinner from './components/Spinner';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>({ name: 'home' });
-  const [listings, setListings] = useState<Listing[]>(MOCK_LISTINGS);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<User | null>(getCurrentUser());
 
-  const handleNavigate = (page: Page) => {
-    // Protected route for creating a listing
-    if (page.name === 'create' && !currentUser) {
-      setCurrentPage({ name: 'login', redirectPage: page });
-      window.scrollTo(0, 0);
-      return;
-    }
+  // Simulate initial data fetch
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setListings(getAllListings());
+      setIsLoading(false);
+    }, 1500); // Simulate a 1.5s network request
 
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleNavigate = (page: Page) => {
     setCurrentPage(page);
     window.scrollTo(0, 0);
   };
 
   const addListing = (newListing: Listing) => {
-    setListings(prev => [newListing, ...prev]);
+    addNewListing(newListing); // Persist listing
+    setListings(prev => [newListing, ...prev]); // Update UI state
     handleNavigate({ name: 'detail', id: newListing.id });
+  };
+
+  const handleDeleteListing = (listingId: string) => {
+    deleteListing(listingId); // Persist deletion
+    setListings(prev => prev.filter(l => l.id !== listingId)); // Update UI state
   };
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
-    const redirectPage = (currentPage.name === 'login' && currentPage.redirectPage) ? currentPage.redirectPage : { name: 'home' };
+    // Fix: Explicitly type `redirectPage` to resolve TypeScript inference issue.
+    const redirectPage: Page = (currentPage.name === 'login' && currentPage.redirectPage) ? currentPage.redirectPage : { name: 'home' };
     handleNavigate(redirectPage);
   };
 
@@ -48,18 +61,22 @@ const App: React.FC = () => {
     handleNavigate({ name: 'home' });
   };
 
+  const handleUpdateUser = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+  };
+
 
   const renderPage = () => {
     switch (currentPage.name) {
       case 'home':
-        return <HomePage onNavigate={handleNavigate} />;
+        return <HomePage onNavigate={handleNavigate} listings={listings} />;
       case 'listings':
         return <ListingsPage onNavigate={handleNavigate} initialFilters={currentPage.filters} listings={listings} />;
       case 'detail':
         const listing = listings.find(l => l.id === currentPage.id);
-        return listing ? <ListingDetailPage listing={listing} onNavigate={handleNavigate} listings={listings} /> : <HomePage onNavigate={handleNavigate} />;
+        return listing ? <ListingDetailPage listing={listing} onNavigate={handleNavigate} listings={listings} /> : <HomePage onNavigate={handleNavigate} listings={listings} />;
       case 'create':
-        return currentUser ? <CreateListingPage onAddListing={addListing} currentUser={currentUser} /> : <LoginPage onLogin={handleLogin} onNavigate={handleNavigate} />;
+        return <CreateListingPage onAddListing={addListing} currentUser={currentUser} onAuthSuccess={handleLogin} />;
       case 'about':
         return <AboutUsPage />;
       case 'login':
@@ -73,10 +90,22 @@ const App: React.FC = () => {
         // For testing, you can manually navigate by setting the state in dev tools or creating a temporary link.
         console.log(`Navigating to Reset Password with token: ${currentPage.token}`);
         return <ResetPasswordPage token={currentPage.token} onNavigate={handleNavigate} />;
+      case 'profile':
+        return <UserProfilePage userId={currentPage.userId} listings={listings} onNavigate={handleNavigate} currentUser={currentUser} onUpdateUser={handleUpdateUser} onDeleteListing={handleDeleteListing} />;
       default:
-        return <HomePage onNavigate={handleNavigate} />;
+        return <HomePage onNavigate={handleNavigate} listings={listings} />;
     }
   };
+
+  // Show a full-page spinner while initial data is loading
+  if (isLoading) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-center text-gray-800">
+        <Spinner size="lg" />
+        <p className="mt-4 text-lg text-gray-600">Učitavanje oglasa...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col text-gray-800">

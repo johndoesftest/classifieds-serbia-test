@@ -34,6 +34,13 @@ export interface User {
   avatar: string;
 }
 
+export interface Report {
+  id: string;
+  listingId: string;
+  reason: string;
+  reportedAt: string;
+}
+
 export type Page =
   | { name: 'home' }
   | { name: 'listings'; filters?: Partial<FilterState> }
@@ -43,7 +50,8 @@ export type Page =
   | { name: 'login'; redirectPage?: Page }
   | { name: 'register' }
   | { name: 'forgot-password' }
-  | { name: 'reset-password'; token: string };
+  | { name: 'reset-password'; token: string }
+  | { name: 'profile'; userId: string };
 
 
 export interface FilterState {

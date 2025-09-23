@@ -1,31 +1,14 @@
 import { User } from '../types';
+import { findUserByEmail, findUserById, addUser, updateUser } from '../data/users';
 
-// Mock user database
-const MOCK_USERS: User[] = [
-  {
-    id: 'user-1',
-    name: 'Marko Petrović',
-    email: 'marko@example.com',
-    avatar: 'https://i.pravatar.cc/150?u=marko',
-  },
-  {
-    id: 'user-2',
-    name: 'Jelena Jovanović',
-    email: 'jelena@example.com',
-    avatar: 'https://i.pravatar.cc/150?u=jelena',
-  },
-  {
-    id: 'user-3',
-    name: 'Nikola Nikolić',
-    email: 'nikola@example.com',
-    avatar: 'https://i.pravatar.cc/150?u=nikola',
-  }
-];
 
 const USER_SESSION_KEY = 'oglasisrbija_user';
 
+// --- Authentication Functions ---
+
+
 /**
- * Simulates logging in a user.
+ * Simulates logging in a user by checking against the user database.
  * @param email The user's email.
  * @param password The user's password.
  * @param rememberMe Whether to persist the session across browser closures.
@@ -35,9 +18,10 @@ const USER_SESSION_KEY = 'oglasisrbija_user';
 export const login = (email: string, password?: string, rememberMe: boolean = false): Promise<User> => {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      const user = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-      // In a real app, you'd check the password hash. Here we just check if the user exists.
-      // We've hardcoded a simple password check for the primary test user.
+      const user = findUserByEmail(email);
+      
+      // In a real app, you'd check the password hash.
+      // We'll keep the simple check for the primary test user.
       if (user && (password === 'password123' || user.email.toLowerCase() !== 'marko@example.com')) {
         const storage = rememberMe ? localStorage : sessionStorage;
         storage.setItem(USER_SESSION_KEY, JSON.stringify(user));
@@ -50,7 +34,7 @@ export const login = (email: string, password?: string, rememberMe: boolean = fa
 };
 
 /**
- * Simulates registering a new user.
+ * Simulates registering a new user and persists it.
  * @param name The user's full name.
  * @param email The user's email.
  * @param password The user's password.
@@ -60,7 +44,8 @@ export const login = (email: string, password?: string, rememberMe: boolean = fa
 export const register = (name: string, email: string, password?: string): Promise<User> => {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      const existingUser = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+      const existingUser = findUserByEmail(email);
+      
       if (existingUser) {
         reject(new Error('Korisnik sa ovom email adresom već postoji.'));
         return;
@@ -74,8 +59,7 @@ export const register = (name: string, email: string, password?: string): Promis
         avatar: `https://i.pravatar.cc/150?u=${newId}`,
       };
       
-      // Add user to the mock database for this session
-      MOCK_USERS.push(newUser);
+      addUser(newUser);
 
       // Log the user in immediately after registration (session only)
       sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify(newUser));
@@ -93,7 +77,7 @@ export const register = (name: string, email: string, password?: string): Promis
 export const requestPasswordReset = (email: string): Promise<void> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const user = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+      const user = findUserByEmail(email);
       if (user) {
         // In a real app, you would generate a secure token, store it with an expiry,
         // and email the user a link like /reset-password?token=THE_TOKEN
@@ -130,7 +114,7 @@ export const resetPassword = (token: string, newPassword?: string): Promise<void
         return;
       }
       const userId = token.substring(prefix.length);
-      const user = MOCK_USERS.find(u => u.id === userId);
+      const user = findUserById(userId);
 
       if (user) {
         console.log(`--- PASSWORD RESET SIMULATION ---`);
@@ -140,6 +124,39 @@ export const resetPassword = (token: string, newPassword?: string): Promise<void
         resolve();
       } else {
         reject(new Error("Nevažeći ili istekli token za resetovanje."));
+      }
+    }, 1000);
+  });
+};
+
+/**
+ * Updates the currently logged-in user's profile information.
+ * @param updatedData An object containing the fields to update (e.g., name, avatar).
+ * @returns A promise that resolves with the fully updated User object.
+ * @throws An error if no user is logged in or the update fails.
+ */
+export const updateCurrentUser = (updatedData: Partial<User>): Promise<User> => {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => { // Simulate network delay
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        reject(new Error("Nijedan korisnik trenutno nije prijavljen."));
+        return;
+      }
+
+      const updatedUser = { ...currentUser, ...updatedData };
+
+      try {
+        const savedUser = updateUser(updatedUser);
+        
+        // Re-set the session/local storage with the new user data
+        const persistentUserJson = localStorage.getItem(USER_SESSION_KEY);
+        const storage = persistentUserJson ? localStorage : sessionStorage;
+        storage.setItem(USER_SESSION_KEY, JSON.stringify(savedUser));
+        
+        resolve(savedUser);
+      } catch (error) {
+        reject(error);
       }
     }, 1000);
   });
