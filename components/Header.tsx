@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Page, User } from '../types';
 import { LogoIcon, PlusCircleIcon, MenuIcon, XIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon } from './Icons';
+import { PLACEHOLDER_AVATAR_URL } from '../constants';
 
 interface HeaderProps {
   onNavigate: (page: Page) => void;
@@ -106,7 +107,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
               {currentUser ? (
                 <div className="relative" ref={userMenuRef}>
                   <button onClick={() => setIsUserMenuOpen(prev => !prev)} className="flex items-center space-x-2 focus:outline-none">
-                    <img src={currentUser.avatar} alt={currentUser.name} className="h-10 w-10 rounded-full border-2 border-transparent hover:border-blue-500 transition-colors" />
+                    <img src={currentUser.avatar || PLACEHOLDER_AVATAR_URL} alt={currentUser.name} className="h-10 w-10 rounded-full border-2 border-transparent hover:border-blue-500 transition-colors" />
                   </button>
                   <div
                     className={`absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-2xl ring-1 ring-black ring-opacity-5 origin-top-right transition-all duration-200 ease-out z-50
@@ -174,7 +175,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
               {currentUser ? (
                   <div className="pb-6 mb-6 border-b border-gray-200">
                      <div className="flex items-center space-x-3" onClick={() => onNavigate({ name: 'profile', userId: currentUser.id })}>
-                      <img src={currentUser.avatar} alt={currentUser.name} className="h-12 w-12 rounded-full" />
+                      <img src={currentUser.avatar || PLACEHOLDER_AVATAR_URL} alt={currentUser.name} className="h-12 w-12 rounded-full" />
                       <div>
                         <p className="font-semibold text-gray-800">{currentUser.name}</p>
                         <p className="text-sm text-gray-500">Pogledaj profil</p>

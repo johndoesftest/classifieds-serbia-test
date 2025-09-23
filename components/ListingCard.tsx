@@ -3,6 +3,7 @@
 import React from 'react';
 import { Listing, Page } from '../types';
 import { TrashIcon } from './Icons';
+import { PLACEHOLDER_LISTING_IMAGE_URL } from '../constants';
 
 interface ListingCardProps {
   listing: Listing;
@@ -23,6 +24,8 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onNavigate, isOwner 
     }
   };
 
+  const imageUrl = listing.images && listing.images.length > 0 ? listing.images[0] : PLACEHOLDER_LISTING_IMAGE_URL;
+
   return (
     <div 
       className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col relative"
@@ -38,7 +41,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onNavigate, isOwner 
         </button>
       )}
       <div className="relative h-48">
-        <img src={listing.images[0]} alt={listing.title} className="w-full h-full object-cover" />
+        <img src={imageUrl} alt={listing.title} className="w-full h-full object-cover" />
         <span className="absolute top-2 left-2 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">{listing.location}</span>
       </div>
       <div className="p-4 flex flex-col flex-grow">

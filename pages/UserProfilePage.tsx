@@ -4,6 +4,7 @@ import ListingCard from '../components/ListingCard';
 import { EmailIcon, PhoneIcon, PlusCircleIcon, TrashIcon } from '../components/Icons';
 import { updateCurrentUser } from '../services/authService';
 import Spinner from '../components/Spinner';
+import { PLACEHOLDER_AVATAR_URL } from '../constants';
 
 interface UserProfilePageProps {
   userId: string;
@@ -94,6 +95,8 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, listings, onN
       </div>
     );
   }
+  
+  const avatarUrl = sellerInfo.avatar || PLACEHOLDER_AVATAR_URL;
 
   return (
     <>
@@ -152,9 +155,9 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, listings, onN
                 // DISPLAY VIEW
                 <div>
                   <img 
-                    src={sellerInfo.avatar} 
+                    src={avatarUrl} 
                     alt={sellerInfo.name} 
-                    className="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-blue-200"
+                    className="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-blue-200 object-cover"
                   />
                   <h1 className="text-2xl font-bold text-gray-800">{sellerInfo.name}</h1>
                   {isOwnProfile && (

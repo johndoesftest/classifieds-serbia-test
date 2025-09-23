@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Listing, Page, Category } from '../types';
-import { CATEGORIES } from '../constants';
+import { CATEGORIES, PLACEHOLDER_LISTING_IMAGE_URL } from '../constants';
 import { PhoneIcon, EmailIcon, FlagIcon } from '../components/Icons';
 import ListingCard from '../components/ListingCard';
 import { addReport } from '../data/reports';
@@ -13,7 +13,12 @@ interface ListingDetailPageProps {
 }
 
 const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNavigate, listings }) => {
-  const [mainImage, setMainImage] = useState(listing.images[0]);
+  const displayImages = useMemo(() => 
+    listing.images && listing.images.length > 0 ? listing.images : [PLACEHOLDER_LISTING_IMAGE_URL],
+    [listing.images]
+  );
+  
+  const [mainImage, setMainImage] = useState(displayImages[0]);
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
   const [isReporting, setIsReporting] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -86,7 +91,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNaviga
                 <img src={mainImage} alt={listing.title} className="w-full h-[500px] object-cover rounded-lg shadow-md" />
               </div>
               <div className="flex space-x-2">
-                {listing.images.map((img, index) => (
+                {displayImages.map((img, index) => (
                   <img
                     key={index}
                     src={img}

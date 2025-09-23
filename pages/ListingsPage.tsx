@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Page, Listing, FilterState } from '../types';
 import FilterSidebar from '../components/FilterSidebar';
 import ListingCard from '../components/ListingCard';
+import Pagination from '../components/Pagination';
 
 interface ListingsPageProps {
   onNavigate: (page: Page) => void;
@@ -18,9 +19,12 @@ const initialFilterState: FilterState = {
   condition: '',
 };
 
+const LISTINGS_PER_PAGE = 9;
+
 const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters, listings }) => {
   const [filters, setFilters] = useState<FilterState>({ ...initialFilterState, ...initialFilters });
   const [sortOrder, setSortOrder] = useState('newest');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleFilterChange = (newFilters: FilterState) => {
     setFilters(newFilters);
@@ -29,6 +33,11 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters,
   const resetFilters = () => {
     setFilters(initialFilterState);
   };
+
+  // Reset page to 1 whenever filters change to avoid being on a non-existent page
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, sortOrder]);
 
   const filteredAndSortedListings = useMemo(() => {
     let result = [...listings];
@@ -76,6 +85,17 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters,
     return result;
   }, [listings, filters, sortOrder]);
 
+  const totalPages = Math.ceil(filteredAndSortedListings.length / LISTINGS_PER_PAGE);
+  const currentListings = filteredAndSortedListings.slice(
+    (currentPage - 1) * LISTINGS_PER_PAGE,
+    currentPage * LISTINGS_PER_PAGE
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -100,12 +120,19 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters,
               </select>
             </div>
           </div>
-          {filteredAndSortedListings.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredAndSortedListings.map(listing => (
-                <ListingCard key={listing.id} listing={listing} onNavigate={onNavigate} />
-              ))}
-            </div>
+          {currentListings.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {currentListings.map(listing => (
+                  <ListingCard key={listing.id} listing={listing} onNavigate={onNavigate} />
+                ))}
+              </div>
+              <Pagination 
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </>
           ) : (
             <div className="text-center py-20 bg-white rounded-lg shadow">
                 <h2 className="text-2xl font-semibold text-gray-700">Nema rezultata</h2>

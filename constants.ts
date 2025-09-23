@@ -13,3 +13,6 @@ export const CATEGORIES: Category[] = [
 export const LOCATIONS: string[] = [
   'Beograd', 'Novi Sad', 'Niš', 'Kragujevac', 'Subotica', 'Zrenjanin', 'Pančevo', 'Čačak', 'Kraljevo', 'Novi Pazar', 'Smederevo', 'Valjevo', 'Šabac', 'Užice'
 ];
+
+export const PLACEHOLDER_LISTING_IMAGE_URL = 'https://via.placeholder.com/800x600/e2e8f0/64748b?text=Slika+nije+dostupna';
+export const PLACEHOLDER_AVATAR_URL = 'https://via.placeholder.com/150/e2e8f0/64748b?text=Korisnik';
