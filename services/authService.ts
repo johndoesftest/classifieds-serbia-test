@@ -57,6 +57,8 @@ export const register = (name: string, email: string, password?: string): Promis
         name,
         email,
         avatar: `https://i.pravatar.cc/150?u=${newId}`,
+        // FIX: Add required accountType property for new user registration.
+        accountType: 'private',
       };
       
       addUser(newUser);

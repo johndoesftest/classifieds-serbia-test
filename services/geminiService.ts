@@ -21,6 +21,7 @@ export const generateDescription = async (keywords: string): Promise<string> => 
       config: {
         temperature: 0.7,
         maxOutputTokens: 300,
+        // Fix: Set thinking budget to 0 for faster, non-complex generation tasks like this.
         thinkingConfig: { thinkingBudget: 0 }
       }
     });

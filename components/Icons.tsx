@@ -1,73 +1,81 @@
 import React from 'react';
 import {
-  Boxes,
+  Search,
   Car,
-  Home as HomeIconLucide,
+  Home,
   Briefcase,
   Wrench,
-  Smartphone,
-  Lamp,
-  Sparkles,
-  Search,
-  MessageCircle,
-  Handshake,
-  Layers,
-  MousePointerClick,
-  MapPin,
-  Quote,
-  Image,
-  X,
   PlusCircle,
-  ChevronsUpDown,
   Menu,
+  X,
+  UserCircle,
+  Settings,
+  LogOut,
+  MapPin,
   Facebook,
   Twitter,
   Instagram,
+  Trash2,
+  MessageSquare,
+  Handshake,
+  Layers,
+  MousePointer2,
+  Quote,
   Phone,
   Mail,
   Flag,
-  Trash2,
-  UserCircle2,
-  Settings,
-  LogOut,
+  ChevronsUpDown,
+  Sparkles,
   ChevronLeft,
   ChevronRight,
+  Camera,
+  Pencil,
+  Check,
+  Building2,
+  Package,
+  PawPrint, // Added PawPrint icon
   type LucideProps
 } from 'lucide-react';
 
-// Re-exporting with the same names to minimize changes in other files.
-// The default props for Lucide icons are stroke="currentColor", strokeWidth="2", fill="none"
-// We will adjust the ones that were filled icons.
+// For branding, we'll keep the custom LogoIcon SVG.
+export const LogoIcon: React.FC<LucideProps> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+    </svg>
+);
 
-export const LogoIcon: React.FC<LucideProps> = (props) => <Boxes {...props} />;
-export const CarIcon: React.FC<LucideProps> = (props) => <Car {...props} />;
-export const RealEstateIcon: React.FC<LucideProps> = (props) => <HomeIconLucide {...props} />;
-export const JobIcon: React.FC<LucideProps> = (props) => <Briefcase {...props} />;
-export const ServiceIcon: React.FC<LucideProps> = (props) => <Wrench {...props} />;
-export const ElectronicsIcon: React.FC<LucideProps> = (props) => <Smartphone {...props} />;
-export const HomeIcon: React.FC<LucideProps> = (props) => <Lamp {...props} />;
-export const SparklesIcon: React.FC<LucideProps> = (props) => <Sparkles {...props} />;
-export const SearchIcon: React.FC<LucideProps> = (props) => <Search {...props} />;
-export const ChatBubbleIcon: React.FC<LucideProps> = (props) => <MessageCircle {...props} />;
-export const HandshakeIcon: React.FC<LucideProps> = (props) => <Handshake {...props} />;
-export const LayersIcon: React.FC<LucideProps> = (props) => <Layers {...props} />;
-export const CursorArrowIcon: React.FC<LucideProps> = (props) => <MousePointerClick {...props} />;
-export const MapPinIcon: React.FC<LucideProps> = (props) => <MapPin {...props} />;
-export const QuoteIcon: React.FC<LucideProps> = (props) => <Quote {...props} fill="currentColor" />;
-export const PhotoIcon: React.FC<LucideProps> = (props) => <Image {...props} />;
-export const XIcon: React.FC<LucideProps> = (props) => <X {...props} />;
-export const PlusCircleIcon: React.FC<LucideProps> = (props) => <PlusCircle {...props} />;
-export const ChevronUpDownIcon: React.FC<LucideProps> = (props) => <ChevronsUpDown {...props} />;
-export const MenuIcon: React.FC<LucideProps> = (props) => <Menu {...props} />;
-export const FacebookIcon: React.FC<LucideProps> = (props) => <Facebook {...props} fill="currentColor" />;
-export const TwitterIcon: React.FC<LucideProps> = (props) => <Twitter {...props} fill="currentColor" />;
-export const InstagramIcon: React.FC<LucideProps> = (props) => <Instagram {...props} fill="currentColor" />;
-export const PhoneIcon: React.FC<LucideProps> = (props) => <Phone {...props} />;
-export const EmailIcon: React.FC<LucideProps> = (props) => <Mail {...props} />;
-export const FlagIcon: React.FC<LucideProps> = (props) => <Flag {...props} />;
-export const TrashIcon: React.FC<LucideProps> = (props) => <Trash2 {...props} />;
-export const UserCircleIcon: React.FC<LucideProps> = (props) => <UserCircle2 {...props} />;
-export const Cog6ToothIcon: React.FC<LucideProps> = (props) => <Settings {...props} />;
-export const ArrowRightOnRectangleIcon: React.FC<LucideProps> = (props) => <LogOut {...props} />;
-export const ChevronLeftIcon: React.FC<LucideProps> = (props) => <ChevronLeft {...props} />;
-export const ChevronRightIcon: React.FC<LucideProps> = (props) => <ChevronRight {...props} />;
+// Re-exporting Lucide icons with the names used throughout the app
+export const SearchIcon = Search;
+export const CarIcon = Car;
+export const RealEstateIcon = Home;
+export const JobIcon = Briefcase;
+export const ServiceIcon = Wrench;
+export const PackageIcon = Package;
+export const PawPrintIcon = PawPrint; // New icon for pets
+export const PlusCircleIcon = PlusCircle;
+export const MenuIcon = Menu;
+export const XIcon = X;
+export const UserCircleIcon = UserCircle;
+export const Cog6ToothIcon = Settings;
+export const ArrowRightOnRectangleIcon = LogOut;
+export const MapPinIcon = MapPin;
+export const FacebookIcon = Facebook;
+export const TwitterIcon = Twitter;
+export const InstagramIcon = Instagram;
+export const TrashIcon = Trash2;
+export const ChatBubbleIcon = MessageSquare;
+export const HandshakeIcon = Handshake;
+export const LayersIcon = Layers;
+export const CursorArrowIcon = MousePointer2;
+export const QuoteIcon = Quote;
+export const PhoneIcon = Phone;
+export const EmailIcon = Mail;
+export const FlagIcon = Flag;
+export const ChevronUpDownIcon = ChevronsUpDown;
+export const SparklesIcon = Sparkles;
+export const ChevronLeftIcon = ChevronLeft;
+export const ChevronRightIcon = ChevronRight;
+export const CameraIcon = Camera;
+export const PencilIcon = Pencil;
+export const CheckIcon = Check;
+export const Building2Icon = Building2;

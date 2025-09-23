@@ -179,11 +179,13 @@ const CtaSection: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate
 
 
 const HomePage: React.FC<HomePageProps> = ({ onNavigate, listings }) => {
-    const [searchTerm, setSearchTerm] = useState('');
+    const [keyword, setKeyword] = useState('');
+    const [location, setLocation] = useState('');
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        onNavigate({ name: 'listings', filters: { searchTerm } });
+        const combinedSearchTerm = `${keyword} ${location}`.trim();
+        onNavigate({ name: 'listings', filters: { searchTerm: combinedSearchTerm } });
     };
 
     const latestListings = [...listings]
@@ -206,15 +208,30 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, listings }) => {
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
                     <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 animate-fade-in-down">Pronađite sve što vam treba</h1>
                     <p className="text-lg md:text-xl text-blue-100 max-w-3xl mx-auto mb-8 animate-fade-in-up">Najveća platforma za oglase u Srbiji. Kupujte, prodajte, jednostavno i brzo.</p>
-                    <form onSubmit={handleSearch} className="max-w-2xl mx-auto bg-white rounded-lg shadow-2xl p-2 flex items-center">
-                        <input 
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Šta tražite? Npr. 'Stan u Beogradu'"
-                            className="w-full p-4 border-none text-gray-700 focus:ring-0 text-lg"
-                        />
-                        <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-md transition-colors duration-300">
+                     <form onSubmit={handleSearch} className="max-w-3xl mx-auto bg-white rounded-full shadow-2xl p-2 flex items-center transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500">
+                        <div className="flex items-center flex-1 pl-4">
+                            <SearchIcon className="h-6 w-6 text-gray-400 flex-shrink-0" />
+                            <input 
+                                type="text"
+                                value={keyword}
+                                onChange={(e) => setKeyword(e.target.value)}
+                                placeholder="Šta tražite?"
+                                className="w-full p-3 border-none text-gray-700 focus:ring-0 text-lg bg-transparent"
+                                aria-label="Pretraga po ključnoj reči"
+                            />
+                        </div>
+                        <div className="flex items-center flex-1 pl-4 border-l-2 border-gray-100">
+                            <MapPinIcon className="h-6 w-6 text-gray-400 flex-shrink-0" />
+                            <input 
+                                type="text"
+                                value={location}
+                                onChange={(e) => setLocation(e.target.value)}
+                                placeholder="Lokacija"
+                                className="w-full p-3 border-none text-gray-700 focus:ring-0 text-lg bg-transparent"
+                                aria-label="Pretraga po lokaciji"
+                            />
+                        </div>
+                        <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-full transition-colors duration-300 ml-2 flex-shrink-0">
                             Traži
                         </button>
                     </form>

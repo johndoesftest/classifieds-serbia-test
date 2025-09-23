@@ -1,35 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { Page, User, Listing, FilterState } from './types';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import ListingsPage from './pages/ListingsPage';
 import ListingDetailPage from './pages/ListingDetailPage';
 import CreateListingPage from './pages/CreateListingPage';
-import AboutUsPage from './pages/AboutUsPage';
 import LoginPage from './pages/LoginPage';
 import RegistrationPage from './pages/RegistrationPage';
+import UserProfilePage from './pages/UserProfilePage';
+import AboutUsPage from './pages/AboutUsPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import UserProfilePage from './pages/UserProfilePage';
-import { Page, Listing, User } from './types';
 import { getCurrentUser, logout } from './services/authService';
-import { getAllListings, addNewListing, deleteListing } from './data/listings';
-import Spinner from './components/Spinner';
+import { getAllListings, addNewListing as addListingToDB, deleteListing as deleteListingFromDB } from './data/listings';
 
-const App: React.FC = () => {
+function App() {
   const [currentPage, setCurrentPage] = useState<Page>({ name: 'home' });
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [currentUser, setCurrentUser] = useState<User | null>(getCurrentUser());
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate initial data fetch
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setListings(getAllListings());
-      setIsLoading(false);
-    }, 1500); // Simulate a 1.5s network request
-
-    return () => clearTimeout(timer);
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+    }
+    const allListings = getAllListings();
+    setListings(allListings);
+    setIsLoading(false);
   }, []);
 
   const handleNavigate = (page: Page) => {
@@ -37,21 +36,9 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  const addListing = (newListing: Listing) => {
-    addNewListing(newListing); // Persist listing
-    setListings(prev => [newListing, ...prev]); // Update UI state
-    handleNavigate({ name: 'detail', id: newListing.id });
-  };
-
-  const handleDeleteListing = (listingId: string) => {
-    deleteListing(listingId); // Persist deletion
-    setListings(prev => prev.filter(l => l.id !== listingId)); // Update UI state
-  };
-
   const handleLogin = (user: User) => {
     setCurrentUser(user);
-    // Fix: Explicitly type `redirectPage` to resolve TypeScript inference issue.
-    const redirectPage: Page = (currentPage.name === 'login' && currentPage.redirectPage) ? currentPage.redirectPage : { name: 'home' };
+    const redirectPage = (currentPage as any).redirectPage || { name: 'home' };
     handleNavigate(redirectPage);
   };
 
@@ -60,62 +47,78 @@ const App: React.FC = () => {
     setCurrentUser(null);
     handleNavigate({ name: 'home' });
   };
-
-  const handleUpdateUser = (updatedUser: User) => {
-    setCurrentUser(updatedUser);
+  
+  const handleRegister = (user: User) => {
+    setCurrentUser(user);
+    const redirectPage = (currentPage as any).redirectPage || { name: 'home' };
+    handleNavigate(redirectPage);
   };
 
+  const handleUpdateUser = (user: User) => {
+    setCurrentUser(user);
+  };
+  
+  const handleAddListing = (newListing: Listing) => {
+    addListingToDB(newListing);
+    const allListings = getAllListings();
+    setListings(allListings);
+    handleNavigate({ name: 'detail', id: newListing.id });
+  };
+
+  const handleDeleteListing = (listingId: string) => {
+    if (window.confirm('Da li ste sigurni da želite da obrišete ovaj oglas?')) {
+      deleteListingFromDB(listingId);
+      const allListings = getAllListings();
+      setListings(allListings);
+    }
+  };
 
   const renderPage = () => {
+    if (isLoading) {
+      return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    }
+
     switch (currentPage.name) {
       case 'home':
         return <HomePage onNavigate={handleNavigate} listings={listings} />;
       case 'listings':
-        return <ListingsPage onNavigate={handleNavigate} initialFilters={currentPage.filters} listings={listings} />;
+        return <ListingsPage onNavigate={handleNavigate} listings={listings} initialFilters={currentPage.filters} />;
       case 'detail':
         const listing = listings.find(l => l.id === currentPage.id);
-        return listing ? <ListingDetailPage listing={listing} onNavigate={handleNavigate} listings={listings} /> : <HomePage onNavigate={handleNavigate} listings={listings} />;
+        return listing ? <ListingDetailPage listing={listing} onNavigate={handleNavigate} listings={listings} currentUser={currentUser} /> : <div>Oglas nije pronađen.</div>;
       case 'create':
-        return <CreateListingPage onAddListing={addListing} currentUser={currentUser} onAuthSuccess={handleLogin} />;
+         return <CreateListingPage onNavigate={handleNavigate} currentUser={currentUser} onAddListing={handleAddListing} onAuthSuccess={handleLogin} onUpdateUser={handleUpdateUser}/>;
+      case 'login':
+        return <LoginPage onNavigate={handleNavigate} onLogin={handleLogin} />;
+      case 'register':
+        return <RegistrationPage onNavigate={handleNavigate} onRegister={handleRegister} />;
+      case 'profile':
+        return <UserProfilePage userId={currentPage.userId} currentUser={currentUser} listings={listings} onNavigate={handleNavigate} onUpdateUser={handleUpdateUser} onDeleteListing={handleDeleteListing} />;
       case 'about':
         return <AboutUsPage />;
-      case 'login':
-        return <LoginPage onLogin={handleLogin} onNavigate={handleNavigate} />;
-      case 'register':
-        return <RegistrationPage onRegister={handleLogin} onNavigate={handleNavigate} />;
       case 'forgot-password':
         return <ForgotPasswordPage onNavigate={handleNavigate} />;
       case 'reset-password':
-        // A mock way to simulate navigation. In a real app, you'd get the token from the URL.
-        // For testing, you can manually navigate by setting the state in dev tools or creating a temporary link.
-        console.log(`Navigating to Reset Password with token: ${currentPage.token}`);
-        return <ResetPasswordPage token={currentPage.token} onNavigate={handleNavigate} />;
-      case 'profile':
-        return <UserProfilePage userId={currentPage.userId} listings={listings} onNavigate={handleNavigate} currentUser={currentUser} onUpdateUser={handleUpdateUser} onDeleteListing={handleDeleteListing} />;
+        return <ResetPasswordPage onNavigate={handleNavigate} token={currentPage.token} />;
       default:
         return <HomePage onNavigate={handleNavigate} listings={listings} />;
     }
   };
 
-  // Show a full-page spinner while initial data is loading
-  if (isLoading) {
-    return (
-      <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-center text-gray-800">
-        <Spinner size="lg" />
-        <p className="mt-4 text-lg text-gray-600">Učitavanje oglasa...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-gray-50 min-h-screen flex flex-col text-gray-800">
-      <Header onNavigate={handleNavigate} currentPage={currentPage} currentUser={currentUser} onLogout={handleLogout} />
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Header 
+        onNavigate={handleNavigate} 
+        currentPage={currentPage} 
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
       <main className="flex-grow">
         {renderPage()}
       </main>
       <Footer onNavigate={handleNavigate} />
     </div>
   );
-};
+}
 
 export default App;

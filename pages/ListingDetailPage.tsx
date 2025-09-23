@@ -1,231 +1,209 @@
-import React, { useState, useMemo } from 'react';
-import { Listing, Page, Category } from '../types';
-import { CATEGORIES, PLACEHOLDER_LISTING_IMAGE_URL } from '../constants';
-import { PhoneIcon, EmailIcon, FlagIcon } from '../components/Icons';
+import React, { useState } from 'react';
+import { Listing, Page, User, Category } from '../types';
+import { CATEGORIES, PLACEHOLDER_LISTING_IMAGE_URL, PLACEHOLDER_AVATAR_URL } from '../constants';
+import { MapPinIcon, ChevronLeftIcon, ChevronRightIcon, PhoneIcon, EmailIcon, FlagIcon, UserCircleIcon, CheckIcon } from '../components/Icons';
 import ListingCard from '../components/ListingCard';
 import { addReport } from '../data/reports';
-import Spinner from '../components/Spinner';
 
 interface ListingDetailPageProps {
   listing: Listing;
   onNavigate: (page: Page) => void;
   listings: Listing[];
+  currentUser: User | null;
 }
 
-const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNavigate, listings }) => {
-  const displayImages = useMemo(() => 
-    listing.images && listing.images.length > 0 ? listing.images : [PLACEHOLDER_LISTING_IMAGE_URL],
-    [listing.images]
-  );
-  
-  const [mainImage, setMainImage] = useState(displayImages[0]);
-  const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
-  const [isReporting, setIsReporting] = useState(false);
+const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNavigate, listings, currentUser }) => {
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
-  const [isReported, setIsReported] = useState(false);
-  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
 
-  const category = CATEGORIES.find(c => c.id === listing.category) as Category;
+  const category: Category | undefined = CATEGORIES.find(c => c.id === listing.category);
+  const similarListings = listings
+    .filter(l => l.category === listing.category && l.id !== listing.id)
+    .slice(0, 4);
 
-  const formattedPrice = listing.price > 0 
-    ? new Intl.NumberFormat('de-DE').format(listing.price) + ` ${listing.currency}` 
+  const formattedPrice = listing.price > 0
+    ? new Intl.NumberFormat('de-DE').format(listing.price) + ` ${listing.currency}`
     : 'Po dogovoru';
-    
-  const postedDate = new Date(listing.postedDate).toLocaleDateString('sr-RS', {
-    year: 'numeric', month: 'long', day: 'numeric'
-  });
 
-  const handleContactFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setContactForm(prev => ({ ...prev, [name]: value }));
+  const handleNextImage = () => {
+    setActiveImageIndex((prevIndex) => (prevIndex + 1) % listing.images.length);
   };
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handlePrevImage = () => {
+    setActiveImageIndex((prevIndex) => (prevIndex - 1 + listing.images.length) % listing.images.length);
+  };
+  
+  const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactForm.name || !contactForm.email || !contactForm.message) {
-      alert('Molimo popunite sva polja u kontakt formi.');
-      return;
-    }
-    const alertMessage = `Poruka za prodavca "${listing.seller.name}" u vezi oglasa "${listing.title}":\n\n"${contactForm.message}"\n\n(Ovo je simulacija. U pravoj aplikaciji, poruka bi bila poslata.)`;
-    alert(alertMessage);
-    setContactForm({ name: '', email: '', message: '' });
-  };
-
-  const handleSubmitReport = async () => {
-    if (!reportReason.trim()) return;
-
-    setIsSubmittingReport(true);
-    try {
-        await addReport(listing.id, reportReason);
-        setIsReported(true);
-        setIsReporting(false);
+    if (!reportReason) return;
+    await addReport(listing.id, reportReason);
+    setReportSubmitted(true);
+    setTimeout(() => {
+        setShowReportModal(false);
+        setReportSubmitted(false);
         setReportReason('');
-    } catch (error) {
-        console.error("Failed to submit report:", error);
-        alert("Došlo je do greške prilikom slanja prijave. Molimo pokušajte ponovo.");
-    } finally {
-        setIsSubmittingReport(false);
-    }
+    }, 2000);
   };
-
-  const similarListings = useMemo(() => {
-    return listings
-      .filter(l => l.id !== listing.id && l.category === listing.category)
-      .sort((a, b) => {
-        if (a.location === listing.location && b.location !== listing.location) return -1;
-        if (a.location !== listing.location && b.location === listing.location) return 1;
-        return 0;
-      })
-      .slice(0, 4);
-  }, [listings, listing]);
-
 
   return (
-    <>
+    <div className="bg-gray-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-lg shadow-xl overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <main className="lg:col-span-2 space-y-8">
             {/* Image Gallery */}
-            <div className="lg:col-span-2 p-4 sm:p-6">
-              <div className="mb-4">
-                <img src={mainImage} alt={listing.title} className="w-full h-[500px] object-cover rounded-lg shadow-md" />
-              </div>
-              <div className="flex space-x-2">
-                {displayImages.map((img, index) => (
-                  <img
-                    key={index}
-                    src={img}
-                    alt={`${listing.title} thumbnail ${index + 1}`}
-                    onClick={() => setMainImage(img)}
-                    className={`w-24 h-24 object-cover rounded-md cursor-pointer border-2 ${mainImage === img ? 'border-blue-500' : 'border-transparent'} transition-all duration-200`}
-                  />
-                ))}
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="relative aspect-video">
+                <img
+                  src={listing.images[activeImageIndex] || PLACEHOLDER_LISTING_IMAGE_URL}
+                  alt={listing.title}
+                  className="w-full h-full object-cover"
+                />
+                {listing.images.length > 1 && (
+                  <>
+                    <button onClick={handlePrevImage} className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/75 transition-colors">
+                      <ChevronLeftIcon className="h-6 w-6" />
+                    </button>
+                    <button onClick={handleNextImage} className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/75 transition-colors">
+                      <ChevronRightIcon className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+                <div className="absolute bottom-4 right-4 bg-black/50 text-white text-sm px-2 py-1 rounded-md">
+                    {activeImageIndex + 1} / {listing.images.length}
+                </div>
               </div>
             </div>
 
-            {/* Listing Info */}
-            <div className="lg:col-span-1 p-6 bg-gray-50 flex flex-col">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{listing.title}</h1>
-              <p className="text-3xl font-extrabold text-orange-500 mb-4">{formattedPrice}</p>
-              
-              <div className="space-y-4 text-gray-700">
-                <div className="flex items-center"><span className="font-semibold w-24">Lokacija:</span> <span>{listing.location}</span></div>
-                <div className="flex items-center"><span className="font-semibold w-24">Kategorija:</span> <a href="#" onClick={(e)=>{e.preventDefault(); onNavigate({name: 'listings', filters: {category: category.id}})}} className="text-blue-600 hover:underline">{category.name}</a></div>
-                <div className="flex items-center"><span className="font-semibold w-24">Stanje:</span> <span>{listing.condition === 'new' ? 'Novo' : 'Korišćeno'}</span></div>
-                <div className="flex items-center"><span className="font-semibold w-24">Postavljeno:</span> <span>{postedDate}</span></div>
-              </div>
-
-              <div className="mt-8 border-t pt-6">
-                <h3 className="font-semibold text-lg mb-4">Prodavac</h3>
-                <div className="flex items-center space-x-4">
-                  <img src={listing.seller.avatar} alt={listing.seller.name} className="w-16 h-16 rounded-full" />
+            {/* Listing Details */}
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-bold text-gray-800 text-lg">{listing.seller.name}</p>
-                    <a href="#" onClick={(e) => { e.preventDefault(); onNavigate({ name: 'profile', userId: listing.seller.id }); }} className="text-sm text-blue-600 hover:underline">Svi oglasi prodavca</a>
+                    {category && <p className="font-semibold text-blue-600">{category.name}</p>}
+                    <h1 className="text-3xl font-bold text-gray-900 mt-1">{listing.title}</h1>
+                    <div className="flex items-center text-gray-500 mt-2">
+                      <MapPinIcon className="h-5 w-5 mr-1" />
+                      <span>{listing.location}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {listing.seller.phone && (
-                    <div className="flex items-center text-gray-700">
-                      <PhoneIcon className="h-5 w-5 mr-3 text-gray-500 flex-shrink-0" />
-                      <a href={`tel:${listing.seller.phone}`} className="hover:text-blue-600">{listing.seller.phone}</a>
-                    </div>
-                  )}
-                  {listing.seller.email && (
-                    <div className="flex items-center text-gray-700">
-                      <EmailIcon className="h-5 w-5 mr-3 text-gray-500 flex-shrink-0" />
-                       <a href={`mailto:${listing.seller.email}`} className="hover:text-blue-600 truncate">{listing.seller.email}</a>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-6 text-center">
-                    <button
-                        onClick={() => setIsReporting(true)}
-                        disabled={isReported}
-                        className="text-sm text-gray-500 hover:text-red-600 hover:underline disabled:text-gray-400 disabled:cursor-not-allowed disabled:no-underline flex items-center justify-center mx-auto gap-x-1.5 transition-colors"
-                    >
-                        <FlagIcon className="h-4 w-4" />
-                        {isReported ? 'Oglas je prijavljen' : 'Prijavi oglas'}
-                    </button>
-                </div>
+                  <p className="text-3xl font-extrabold text-orange-500 flex-shrink-0">{formattedPrice}</p>
               </div>
-              
-              {/* Conditional Contact Form */}
-              {listing.category !== 'poslovi' && (
-                <div className="mt-auto pt-6 border-t flex-grow flex flex-col">
-                  <h3 className="font-semibold text-lg mb-4">Kontaktirajte Prodavca</h3>
-                  <form onSubmit={handleContactSubmit} className="space-y-4 flex-grow flex flex-col">
-                    <div>
-                      <label htmlFor="name" className="sr-only">Vaše ime</label>
-                      <input type="text" name="name" id="name" required value={contactForm.name} onChange={handleContactFormChange} placeholder="Vaše ime" className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+              <div className="mt-6 border-t pt-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-4">Opis</h2>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{listing.description}</p>
+              </div>
+              {listing.specifics && Object.keys(listing.specifics).length > 0 && (
+                 <div className="mt-6 border-t pt-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">Detalji</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {Object.entries(listing.specifics).map(([key, value]) => (
+                            <div key={key}>
+                                <p className="text-sm text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
+                                <p className="font-semibold text-gray-800">{value}</p>
+                            </div>
+                        ))}
                     </div>
-                    <div>
-                      <label htmlFor="email" className="sr-only">Vaš email</label>
-                      <input type="email" name="email" id="email" required value={contactForm.email} onChange={handleContactFormChange} placeholder="Vaš email" className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-                    </div>
-                    <div className="flex-grow flex">
-                      <label htmlFor="message" className="sr-only">Poruka</label>
-                      <textarea name="message" id="message" required value={contactForm.message} onChange={handleContactFormChange} rows={4} placeholder="Unesite poruku..." className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 flex-grow"></textarea>
-                    </div>
-                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 text-lg">
-                      Pošalji Poruku
-                    </button>
-                  </form>
                 </div>
               )}
-
             </div>
-          </div>
-          
-          {/* Description */}
-          <div className="p-6 md:p-8 border-t">
-            <h2 className="text-2xl font-bold mb-4">Opis</h2>
-            <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{listing.description}</p>
-          </div>
+          </main>
+
+          {/* Sidebar */}
+          <aside className="lg:col-span-1 space-y-8 lg:sticky lg:top-28 self-start">
+             {/* Seller Info */}
+             <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+                 <img 
+                    src={listing.seller.avatar || PLACEHOLDER_AVATAR_URL} 
+                    alt={listing.seller.name} 
+                    className="h-24 w-24 rounded-full mx-auto ring-4 ring-blue-500/30"
+                />
+                <h3 className="mt-4 text-xl font-bold text-gray-900">{listing.seller.name}</h3>
+                <button 
+                    onClick={() => onNavigate({ name: 'profile', userId: listing.seller.id })}
+                    className="mt-2 text-sm font-semibold text-blue-600 hover:underline"
+                >
+                    Svi oglasi ovog korisnika
+                </button>
+                <div className="mt-6 space-y-3">
+                    {listing.seller.phone &&
+                        <button className="w-full flex items-center justify-center gap-x-2 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                            <PhoneIcon className="h-5 w-5" />
+                            <span>Prikaži telefon</span>
+                        </button>
+                    }
+                    <button className="w-full flex items-center justify-center gap-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                        <EmailIcon className="h-5 w-5" />
+                        <span>Pošalji poruku</span>
+                    </button>
+                </div>
+             </div>
+             {/* Report Ad */}
+             <div className="text-center">
+                <button 
+                    onClick={() => setShowReportModal(true)}
+                    className="flex items-center justify-center gap-x-2 text-sm font-medium text-gray-500 hover:text-red-600 transition-colors w-full"
+                >
+                    <FlagIcon className="h-4 w-4" />
+                    Prijavi oglas
+                </button>
+             </div>
+          </aside>
         </div>
 
-        {/* Similar Listings Section */}
+        {/* Similar Listings */}
         {similarListings.length > 0 && (
           <div className="mt-16">
-            <h2 className="text-3xl font-bold mb-8 text-gray-800">Slični Oglasi</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {similarListings.map(similar => (
-                <ListingCard key={similar.id} listing={similar} onNavigate={onNavigate} />
-              ))}
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Slični Oglasi</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {similarListings.map(l => <ListingCard key={l.id} listing={l} onNavigate={onNavigate} />)}
             </div>
           </div>
         )}
       </div>
 
-      {/* Report Modal */}
-      {isReporting && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fade-in-up">
-                <h3 className="text-xl font-bold mb-2 text-gray-800">Prijavi oglas</h3>
-                <p className="text-sm text-gray-600 mb-4">Molimo opišite zašto smatrate da ovaj oglas nije primeren. Vaša prijava je anonimna.</p>
-                <textarea
-                    value={reportReason}
-                    onChange={(e) => setReportReason(e.target.value)}
-                    rows={5}
-                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Npr. lažan oglas, sumnjiva cena, uvredljiv sadržaj..."
-                />
-                <div className="mt-6 flex justify-end space-x-3">
-                    <button onClick={() => setIsReporting(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 transition-colors">
-                      Otkaži
-                    </button>
-                    <button 
-                      onClick={handleSubmitReport} 
-                      disabled={isSubmittingReport || !reportReason.trim()} 
-                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed flex items-center gap-x-2 transition-colors"
-                    >
-                        {isSubmittingReport ? <Spinner size="sm" /> : 'Pošalji prijavu'}
-                    </button>
+       {/* Report Modal */}
+       {showReportModal && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md relative">
+                    {reportSubmitted ? (
+                        <div className="text-center py-8">
+                            <CheckIcon className="mx-auto h-12 w-12 text-green-500 bg-green-100 rounded-full p-2" />
+                            <h3 className="text-xl font-bold text-gray-800 mt-4">Hvala na prijavi!</h3>
+                            <p className="text-gray-600 mt-2">Vaša prijava je primljena i biće pregledana uskoro.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">Prijavite oglas</h3>
+                            <form onSubmit={handleReportSubmit}>
+                                <label htmlFor="reportReason" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Molimo opišite problem:
+                                </label>
+                                <textarea 
+                                    id="reportReason"
+                                    value={reportReason}
+                                    onChange={(e) => setReportReason(e.target.value)}
+                                    rows={4}
+                                    required
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Npr. oglas je lažan, cena nije tačna, predmet je prodat..."
+                                />
+                                <div className="mt-6 flex justify-end gap-x-3">
+                                    <button type="button" onClick={() => setShowReportModal(false)} className="px-4 py-2 text-sm font-semibold bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                                        Otkaži
+                                    </button>
+                                    <button type="submit" className="px-4 py-2 text-sm font-semibold bg-red-600 text-white rounded-md hover:bg-red-700">
+                                        Pošalji prijavu
+                                    </button>
+                                </div>
+                            </form>
+                        </>
+                    )}
                 </div>
             </div>
-        </div>
-      )}
-    </>
+       )}
+    </div>
   );
 };
 

@@ -44,7 +44,14 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters,
 
     // Filtering
     result = result.filter(listing => {
-      const searchTermMatch = filters.searchTerm ? listing.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) : true;
+      // Improved search term logic
+      let searchTermMatch = true;
+      if (filters.searchTerm) {
+          const searchWords = filters.searchTerm.toLowerCase().split(' ').filter(word => word.length > 0);
+          const listingContent = `${listing.title} ${listing.description} ${listing.location}`.toLowerCase();
+          searchTermMatch = searchWords.every(word => listingContent.includes(word));
+      }
+      
       const categoryMatch = filters.category ? listing.category === filters.category : true;
       const locationMatch = filters.location.length > 0 ? filters.location.includes(listing.location) : true;
       const conditionMatch = filters.condition ? listing.condition === filters.condition : true;
@@ -100,7 +107,7 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters,
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <aside className="lg:col-span-1">
+        <aside className="lg:col-span-1 lg:sticky lg:top-28 self-start">
           <FilterSidebar filters={filters} onFilterChange={handleFilterChange} onReset={resetFilters} />
         </aside>
         <main className="lg:col-span-3">

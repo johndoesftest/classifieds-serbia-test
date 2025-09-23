@@ -1,13 +1,13 @@
 import { Category } from './types';
-import { CarIcon, RealEstateIcon, JobIcon, ServiceIcon, ElectronicsIcon, HomeIcon } from './components/Icons';
+import { CarIcon, RealEstateIcon, JobIcon, ServiceIcon, PackageIcon, PawPrintIcon } from './components/Icons';
 
 export const CATEGORIES: Category[] = [
   { id: 'automobili', name: 'Automobili', icon: CarIcon },
   { id: 'nekretnine', name: 'Nekretnine', icon: RealEstateIcon },
   { id: 'poslovi', name: 'Poslovi', icon: JobIcon },
   { id: 'usluge', name: 'Usluge', icon: ServiceIcon },
-  { id: 'elektronika', name: 'Elektronika', icon: ElectronicsIcon },
-  { id: 'kuca-i-basta', name: 'Kuća i Bašta', icon: HomeIcon },
+  { id: 'roba-i-proizvodi', name: 'Roba i Proizvodi', icon: PackageIcon },
+  { id: 'kucni-ljubimci', name: 'Kućni Ljubimci', icon: PawPrintIcon },
 ];
 
 export const LOCATIONS: string[] = [

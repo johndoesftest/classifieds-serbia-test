@@ -1,263 +1,308 @@
-import React, { useState } from 'react';
-import { Listing, Page, User } from '../types';
-import ListingCard from '../components/ListingCard';
-import { EmailIcon, PhoneIcon, PlusCircleIcon, TrashIcon } from '../components/Icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import { User, Listing, Page } from '../types';
+import { findUserById } from '../data/users';
 import { updateCurrentUser } from '../services/authService';
+import ListingCard from '../components/ListingCard';
 import Spinner from '../components/Spinner';
 import { PLACEHOLDER_AVATAR_URL } from '../constants';
+import { EmailIcon, PhoneIcon, PencilIcon, CheckIcon, XIcon, UserCircleIcon, Building2Icon, SparklesIcon } from '../components/Icons';
 
 interface UserProfilePageProps {
   userId: string;
+  currentUser: User | null;
   listings: Listing[];
   onNavigate: (page: Page) => void;
-  currentUser: User | null;
   onUpdateUser: (user: User) => void;
   onDeleteListing: (listingId: string) => void;
 }
 
-const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, listings, onNavigate, currentUser, onUpdateUser, onDeleteListing }) => {
+const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, currentUser, listings, onNavigate, onUpdateUser, onDeleteListing }) => {
+  const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [userListings, setUserListings] = useState<Listing[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [isEditing, setIsEditing] = useState(false);
-  const [editedInfo, setEditedInfo] = useState({ name: '', avatar: '' });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [listingToDelete, setListingToDelete] = useState<Listing | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const [isConverting, setIsConverting] = useState(false);
+  const [businessName, setBusinessName] = useState('');
+  const [businessDescription, setBusinessDescription] = useState('');
 
-  const userListings = listings.filter(l => l.seller.id === userId);
-  const isOwnProfile = currentUser?.id === userId;
 
-  let sellerInfo;
-  if (userListings.length > 0) {
-    sellerInfo = userListings[0].seller;
-  } else if (isOwnProfile) {
-    sellerInfo = currentUser;
-  }
+  const isOwnProfile = useMemo(() => currentUser?.id === userId, [currentUser, userId]);
 
-  const handleEditClick = () => {
-    if (sellerInfo) {
-      setEditedInfo({ name: sellerInfo.name, avatar: sellerInfo.avatar });
-      setIsEditing(true);
-      setError('');
-    }
-  };
-
-  const handleCancelClick = () => {
-    setIsEditing(false);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEditedInfo(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSaveClick = async () => {
-    if (!editedInfo.name.trim()) {
-      setError("Ime ne može biti prazno.");
-      return;
-    }
-    setError('');
+  useEffect(() => {
     setIsLoading(true);
-    try {
-      const updatedUser = await updateCurrentUser({ name: editedInfo.name, avatar: editedInfo.avatar });
-      onUpdateUser(updatedUser);
-      setIsEditing(false);
-    } catch (err: any) {
-      setError(err.message || 'Došlo je do greške prilikom čuvanja.');
-    } finally {
-      setIsLoading(false);
+    const user = findUserById(userId);
+    if (user) {
+      setProfileUser(user);
+      setEditName(user.name);
+      setEditPhone(user.phone || '');
+      const filteredListings = listings.filter(l => l.seller.id === userId)
+        .sort((a, b) => new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime());
+      setUserListings(filteredListings);
     }
+    setIsLoading(false);
+  }, [userId, listings]);
+  
+  const handleEditToggle = () => {
+      if (isEditing) {
+          if (profileUser) {
+              setEditName(profileUser.name);
+              setEditPhone(profileUser.phone || '');
+          }
+      }
+      setIsEditing(!isEditing);
   };
   
-  const handleDeleteRequest = (listingId: string) => {
-    const listing = userListings.find(l => l.id === listingId);
-    if (listing) {
-      setListingToDelete(listing);
-    }
+  const handleProfileSave = async () => {
+      if (!profileUser) return;
+      setIsSaving(true);
+      try {
+          const updatedUser = await updateCurrentUser({ name: editName, phone: editPhone });
+          setProfileUser(updatedUser);
+          onUpdateUser(updatedUser); // Update app-level state
+          setIsEditing(false);
+      } catch (error) {
+          console.error("Failed to update profile", error);
+          alert("Greška prilikom ažuriranja profila.");
+      } finally {
+          setIsSaving(false);
+      }
+  };
+  
+  const handleConvertToBusiness = async () => {
+      if (!businessName || !businessDescription) {
+          alert("Molimo popunite sva polja.");
+          return;
+      }
+      setIsSaving(true);
+      try {
+          const updatedUser = await updateCurrentUser({
+              accountType: 'business',
+              businessName,
+              businessDescription,
+          });
+          setProfileUser(updatedUser);
+          onUpdateUser(updatedUser);
+          setIsConverting(false);
+      } catch (error) {
+           console.error("Failed to convert to business account", error);
+           alert("Greška prilikom konverzije naloga.");
+      } finally {
+          setIsSaving(false);
+      }
   };
 
-  const confirmDelete = () => {
-    if (listingToDelete) {
-      setIsDeleting(true);
-      // Simulate network delay for a better UX
-      setTimeout(() => {
-        onDeleteListing(listingToDelete.id);
-        setListingToDelete(null);
-        setIsDeleting(false);
-      }, 1000);
-    }
-  };
-
-  if (!sellerInfo) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <h1 className="text-3xl font-bold text-gray-800">Korisnik nije pronađen</h1>
-        <p className="mt-4 text-gray-600">Nije moguće pronaći informacije o ovom korisniku.</p>
-      </div>
-    );
+  if (isLoading) {
+    return <div className="flex justify-center items-center py-20"><Spinner size="lg" /></div>;
   }
-  
-  const avatarUrl = sellerInfo.avatar || PLACEHOLDER_AVATAR_URL;
+
+  if (!profileUser) {
+    return <div className="text-center py-20">Korisnik nije pronađen.</div>;
+  }
+
+  const isBusinessProfile = profileUser.accountType === 'business';
 
   return (
     <>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
-          {/* User Info Sidebar */}
-          <aside className="lg:col-span-1 lg:sticky lg:top-28 self-start">
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              {isEditing ? (
-                // EDITING VIEW
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">Izmeni Profil</h2>
-                  <div className="space-y-4 text-left">
-                    <div>
-                      <label htmlFor="name" className="block text-sm font-medium text-gray-700">Ime i Prezime</label>
-                      <input
-                        type="text"
-                        name="name"
-                        id="name"
-                        value={editedInfo.name}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      />
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          {isBusinessProfile ? (
+            // Business Profile View
+            <div>
+                 <div className="h-48 bg-gradient-to-br from-gray-700 to-gray-900 relative">
+                     <img src={`https://picsum.photos/seed/${profileUser.id}/1200/400`} alt="Business Banner" className="w-full h-full object-cover opacity-30"/>
+                 </div>
+                 <div className="px-8 pb-8">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start -mt-16 sm:-mt-20">
+                         <img 
+                            src={profileUser.avatar || PLACEHOLDER_AVATAR_URL} 
+                            alt={profileUser.businessName} 
+                            className="h-32 w-32 rounded-full ring-4 ring-white object-cover flex-shrink-0 bg-white border-4 border-white"
+                         />
+                         <div className="mt-4 sm:mt-0 sm:ml-6 text-center sm:text-left flex-grow pt-10">
+                            <h1 className="text-3xl font-bold text-gray-900">{profileUser.businessName}</h1>
+                            <p className="text-sm font-medium text-gray-500">Prodavac: {profileUser.name}</p>
+                            <p className="mt-2 text-gray-600 max-w-2xl">{profileUser.businessDescription}</p>
+                         </div>
+                         {isOwnProfile && (
+                              <div className="mt-4 sm:mt-0 sm:pt-10">
+                                 <button onClick={() => alert('Feature coming soon!')} className="flex items-center gap-x-1.5 px-3 py-1.5 text-sm font-semibold text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100">
+                                   <PencilIcon className="h-4 w-4"/> Izmeni Stranicu
+                                 </button>
+                             </div>
+                         )}
                     </div>
-                    <div>
-                      <label htmlFor="avatar" className="block text-sm font-medium text-gray-700">URL Avatara</label>
-                      <input
-                        type="text"
-                        name="avatar"
-                        id="avatar"
-                        value={editedInfo.avatar}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      />
+                     <div className="mt-6 border-t border-gray-200 pt-6 flex flex-wrap gap-x-8 gap-y-4">
+                        <div className="flex items-center gap-x-2 text-gray-700">
+                            <EmailIcon className="h-5 w-5 text-gray-400"/>
+                            <span>{profileUser.email}</span>
+                        </div>
+                        {profileUser.phone && (
+                        <div className="flex items-center gap-x-2 text-gray-700">
+                            <PhoneIcon className="h-5 w-5 text-gray-400"/>
+                            <span>{profileUser.phone}</span>
+                        </div>
+                        )}
                     </div>
-                  </div>
-                  {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-                  <div className="mt-6 flex gap-x-2">
-                    <button
-                      onClick={handleCancelClick}
-                      className="w-full text-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      Otkaži
-                    </button>
-                    <button
-                      onClick={handleSaveClick}
-                      disabled={isLoading}
-                      className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400"
-                    >
-                      {isLoading ? <Spinner size="sm" /> : 'Sačuvaj'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                // DISPLAY VIEW
-                <div>
-                  <img 
-                    src={avatarUrl} 
-                    alt={sellerInfo.name} 
-                    className="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-blue-200 object-cover"
-                  />
-                  <h1 className="text-2xl font-bold text-gray-800">{sellerInfo.name}</h1>
-                  {isOwnProfile && (
-                      <button 
-                          onClick={handleEditClick}
-                          className="mt-4 w-full text-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                          Izmeni Profil
-                      </button>
-                  )}
-                  <div className="mt-4 pt-4 border-t border-gray-200 space-y-3 text-left">
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider text-center">Kontakt Informacije</h3>
-                    {sellerInfo.email && (
-                      <div className="flex items-center text-gray-700">
-                        <EmailIcon className="h-5 w-5 mr-3 text-gray-400 flex-shrink-0" />
-                        <a href={`mailto:${sellerInfo.email}`} className="hover:text-blue-600 truncate text-sm">{sellerInfo.email}</a>
-                      </div>
-                    )}
-                    {sellerInfo.phone && (
-                      <div className="flex items-center text-gray-700">
-                        <PhoneIcon className="h-5 w-5 mr-3 text-gray-400 flex-shrink-0" />
-                        <a href={`tel:${sellerInfo.phone}`} className="hover:text-blue-600 text-sm">{sellerInfo.phone}</a>
-                      </div>
-                    )}
-                    {!sellerInfo.email && !sellerInfo.phone && (
-                      <p className="text-sm text-gray-500 text-center">Kontakt informacije nisu dostupne.</p>
-                    )}
-                  </div>
-                </div>
-              )}
+                 </div>
             </div>
-          </aside>
+          ) : (
+            // Private Profile View
+            <div className="p-8">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start sm:space-x-8">
+                <img 
+                  src={profileUser.avatar || PLACEHOLDER_AVATAR_URL} 
+                  alt={profileUser.name} 
+                  className="h-32 w-32 rounded-full ring-4 ring-blue-500/50 object-cover flex-shrink-0"
+                />
+                <div className="mt-4 sm:mt-0 text-center sm:text-left flex-grow">
+                   {isEditing ? (
+                       <div className="space-y-3">
+                            <input 
+                                type="text" 
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className="text-3xl font-bold text-gray-900 bg-gray-100 border-gray-300 rounded-md w-full"
+                            />
+                             <input 
+                                type="text" 
+                                value={editPhone}
+                                onChange={(e) => setEditPhone(e.target.value)}
+                                placeholder="Broj telefona"
+                                className="text-lg text-gray-700 bg-gray-100 border-gray-300 rounded-md w-full"
+                            />
+                       </div>
+                   ) : (
+                    <>
+                        <h1 className="text-3xl font-bold text-gray-900">{profileUser.name}</h1>
+                        <div className="mt-2 space-y-2 text-gray-600">
+                            <div className="flex items-center justify-center sm:justify-start gap-x-2">
+                            <EmailIcon className="h-5 w-5 text-gray-400"/>
+                            <span>{profileUser.email}</span>
+                            </div>
+                            {profileUser.phone && (
+                            <div className="flex items-center justify-center sm:justify-start gap-x-2">
+                                <PhoneIcon className="h-5 w-5 text-gray-400"/>
+                                <span>{profileUser.phone}</span>
+                            </div>
+                            )}
+                        </div>
+                    </>
+                   )}
+                </div>
+                {isOwnProfile && (
+                    <div className="mt-4 sm:mt-0 flex items-center gap-x-2">
+                        {isEditing ? (
+                            <>
+                                <button onClick={handleProfileSave} disabled={isSaving} className="flex items-center gap-x-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-green-400">
+                                    {isSaving ? <Spinner size="sm" /> : <CheckIcon className="h-4 w-4" />} Sačuvaj
+                                </button>
+                                <button onClick={handleEditToggle} className="flex items-center gap-x-1.5 px-3 py-1.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                                    <XIcon className="h-4 w-4" /> Otkaži
+                                </button>
+                            </>
+                        ) : (
+                             <button onClick={handleEditToggle} className="flex items-center gap-x-1.5 px-3 py-1.5 text-sm font-semibold text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100">
+                               <PencilIcon className="h-4 w-4"/> Izmeni Profil
+                             </button>
+                        )}
+                    </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {isOwnProfile && !isBusinessProfile && (
+            <div className="mt-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-start gap-x-4">
+                    <div className="bg-white/20 rounded-full p-3">
+                        <Building2Icon className="h-8 w-8 text-white"/>
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-white">Prodajete kao firma?</h3>
+                        <p className="text-blue-100 mt-1">Unapredite Vaš nalog u poslovni profil i predstavite se profesionalno.</p>
+                    </div>
+                </div>
+                <button 
+                    onClick={() => setIsConverting(true)}
+                    className="bg-white hover:bg-gray-100 text-blue-600 font-bold py-2.5 px-6 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 whitespace-nowrap"
+                >
+                    Postani Poslovni Korisnik
+                </button>
+            </div>
+        )}
 
-          {/* User's Listings */}
-          <main className="lg:col-span-3">
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-3xl font-bold mb-6 text-gray-800">
-                  Aktivni oglasi korisnika {isOwnProfile ? '' : sellerInfo.name.split(' ')[0]}
-              </h2>
-              {userListings.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {userListings.map(listing => (
-                    <ListingCard 
-                      key={listing.id} 
-                      listing={listing} 
-                      onNavigate={onNavigate} 
-                      isOwner={isOwnProfile}
-                      onDelete={handleDeleteRequest}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16 border-2 border-dashed border-gray-300 rounded-lg">
-                  <h3 className="text-xl font-semibold text-gray-700">Nema aktivnih oglasa</h3>
-                  <p className="text-gray-500 mt-2">
-                    {isOwnProfile ? "Još uvek niste postavili nijedan oglas." : "Ovaj korisnik trenutno nema aktivnih oglasa."}
-                  </p>
-                  {isOwnProfile && (
-                      <button
-                          onClick={() => onNavigate({ name: 'create' })}
-                          className="mt-6 flex items-center mx-auto space-x-2 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
-                      >
-                          <PlusCircleIcon className="h-5 w-5"/>
-                          <span>Postavi Svoj Prvi Oglas</span>
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+              {isOwnProfile ? 'Moji Oglasi' : `Svi oglasi`} ({userListings.length})
+          </h2>
+          {userListings.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {userListings.map(listing => (
+                <ListingCard 
+                  key={listing.id} 
+                  listing={listing} 
+                  onNavigate={onNavigate} 
+                  isOwner={isOwnProfile}
+                  onDelete={onDeleteListing}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-white rounded-lg shadow">
+              <UserCircleIcon className="mx-auto h-12 w-12 text-gray-300" />
+              <h3 className="mt-2 text-xl font-medium text-gray-900">Nema objavljenih oglasa</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                  {isOwnProfile ? "Još uvek niste postavili nijedan oglas." : "Ovaj korisnik trenutno nema aktivnih oglasa."}
+              </p>
+              {isOwnProfile && (
+                  <div className="mt-6">
+                      <button onClick={() => onNavigate({ name: 'create' })} className="font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md">
+                          Postavi prvi oglas
                       </button>
-                  )}
-                </div>
+                  </div>
               )}
             </div>
-          </main>
+          )}
         </div>
       </div>
       
-      {/* Deletion Confirmation Modal */}
-      {listingToDelete && (
+      {/* Convert to Business Modal */}
+       {isConverting && (
         <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fade-in-up">
-                <div className="text-center">
-                    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-                        <TrashIcon className="h-6 w-6 text-red-600" aria-hidden="true" />
+            <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg animate-fade-in-up relative">
+                 <button onClick={() => setIsConverting(false)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
+                    <XIcon className="h-6 w-6"/>
+                 </button>
+                 <div className="flex items-center gap-x-3 mb-4">
+                    <SparklesIcon className="h-8 w-8 text-blue-500"/>
+                    <h3 className="text-2xl font-bold text-gray-800">Unapredite Vaš Nalog</h3>
+                 </div>
+                 <p className="text-gray-600 mb-6">Unesite podatke o Vašoj firmi da biste se predstavili kao poslovni korisnik.</p>
+                 <div className="space-y-4">
+                     <div>
+                        <label htmlFor="modalBusinessName" className="block text-sm font-medium text-gray-700 mb-1">Naziv Firme</label>
+                        <input type="text" id="modalBusinessName" value={businessName} onChange={e => setBusinessName(e.target.value)} required className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
                     </div>
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mt-4">Obriši oglas</h3>
-                    <div className="mt-2">
-                        <p className="text-sm text-gray-500">
-                            Da li ste sigurni da želite da obrišete oglas <span className="font-bold">"{listingToDelete.title}"</span>? Ova akcija se ne može opozvati.
-                        </p>
+                     <div>
+                        <label htmlFor="modalBusinessDescription" className="block text-sm font-medium text-gray-700 mb-1">Opis Firme</label>
+                        <textarea id="modalBusinessDescription" value={businessDescription} onChange={e => setBusinessDescription(e.target.value)} rows={4} required className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
                     </div>
-                </div>
-                <div className="mt-6 flex justify-end space-x-3">
-                    <button onClick={() => setListingToDelete(null)} disabled={isDeleting} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50">
-                      Otkaži
-                    </button>
-                    <button 
-                      onClick={confirmDelete} 
-                      disabled={isDeleting} 
-                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed flex items-center gap-x-2 transition-colors"
-                    >
-                        {isDeleting ? <Spinner size="sm" /> : 'Obriši'}
-                    </button>
-                </div>
+                 </div>
+                 <div className="mt-8 flex justify-end">
+                      <button 
+                        onClick={handleConvertToBusiness} 
+                        disabled={isSaving} 
+                        className="w-full sm:w-auto flex justify-center items-center gap-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition-colors duration-300 disabled:bg-blue-400"
+                      >
+                         {isSaving ? <Spinner size="sm" /> : 'Potvrdi i Konvertuj'}
+                      </button>
+                 </div>
             </div>
         </div>
       )}

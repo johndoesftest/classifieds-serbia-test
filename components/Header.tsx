@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Page, User } from '../types';
-import { LogoIcon, PlusCircleIcon, MenuIcon, XIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon } from './Icons';
+import { LogoIcon, PlusCircleIcon, MenuIcon, XIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, SearchIcon, MapPinIcon } from './Icons';
 import { PLACEHOLDER_AVATAR_URL } from '../constants';
 
 interface HeaderProps {
@@ -13,6 +13,8 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, onLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [location, setLocation] = useState('');
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Close menus on page navigation or click outside
@@ -44,6 +46,18 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
       document.body.style.overflow = 'auto';
     };
   }, [isMenuOpen]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const combinedSearchTerm = `${keyword} ${location}`.trim();
+    if (combinedSearchTerm) {
+      onNavigate({ name: 'listings', filters: { searchTerm: combinedSearchTerm } });
+      setKeyword('');
+      setLocation('');
+      setIsMenuOpen(false); // Close mobile menu if open
+    }
+  };
+
 
   const navLinkClasses = (pageName: 'home' | 'listings') => {
     const isActive = currentPage.name === pageName;
@@ -82,20 +96,54 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
       <header className="bg-white/95 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            <div 
-              className="flex items-center cursor-pointer"
-              onClick={() => onNavigate({ name: 'home' })}
-              aria-label="Početna strana"
-            >
-              <LogoIcon className="h-8 w-auto text-blue-600" />
-              <span className="hidden sm:block ml-3 text-2xl font-bold text-gray-800 tracking-tight">Oglasi<span className="text-blue-600">Srbija</span></span>
+            
+            {/* Left Group: Logo & Navigation */}
+            <div className="flex-shrink-0 flex items-center space-x-8">
+              <div 
+                className="flex items-center cursor-pointer"
+                onClick={() => onNavigate({ name: 'home' })}
+                aria-label="Početna strana"
+              >
+                <LogoIcon className="h-8 w-auto text-blue-600" />
+                <span className="hidden sm:block ml-3 text-2xl font-bold text-gray-800 tracking-tight">Oglasi<span className="text-blue-600">Srbija</span></span>
+              </div>
+              <NavLinks />
             </div>
 
-            <div className="flex-1 flex justify-center px-8">
-                <NavLinks />
+            {/* Center Group: Search Bar */}
+            <div className="flex-1 flex justify-center items-center px-4 sm:px-6 lg:px-8">
+                {currentPage.name !== 'home' && (
+                  <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-full max-w-xl">
+                    <div className="flex items-center bg-gray-100 rounded-full transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500">
+                        <div className="flex items-center flex-1 pl-4">
+                            <SearchIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                            <input 
+                                type="text"
+                                value={keyword}
+                                onChange={(e) => setKeyword(e.target.value)}
+                                placeholder="Šta tražite?"
+                                className="w-full p-2.5 border-none text-gray-700 focus:ring-0 text-sm bg-transparent"
+                                aria-label="Pretraga po ključnoj reči"
+                            />
+                        </div>
+                        <div className="flex items-center flex-1 pl-2 border-l border-gray-200">
+                            <MapPinIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                            <input 
+                                type="text"
+                                value={location}
+                                onChange={(e) => setLocation(e.target.value)}
+                                placeholder="Lokacija"
+                                className="w-full p-2.5 border-none text-gray-700 focus:ring-0 text-sm bg-transparent"
+                                aria-label="Pretraga po lokaciji"
+                            />
+                        </div>
+                    </div>
+                  </form>
+                )}
             </div>
 
-            <div className="flex items-center space-x-4">
+            {/* Right Group: Actions */}
+            <div className="flex-shrink-0 flex items-center space-x-4">
               <button
                 onClick={() => onNavigate({ name: 'create' })}
                 className="hidden sm:flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-full shadow-sm transition-all duration-300 transform hover:scale-105"
@@ -183,6 +231,35 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
                     </div>
                   </div>
                 ) : null}
+
+              <form onSubmit={handleSearchSubmit} className="mb-8 space-y-4">
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={keyword}
+                        onChange={(e) => setKeyword(e.target.value)}
+                        placeholder="Šta tražite?"
+                        className="w-full bg-gray-100 border-transparent rounded-full py-3 pl-12 pr-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        aria-label="Pretraga po ključnoj reči"
+                    />
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                        <SearchIcon className="h-5 w-5 text-gray-500" />
+                    </div>
+                </div>
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="Lokacija"
+                        className="w-full bg-gray-100 border-transparent rounded-full py-3 pl-12 pr-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        aria-label="Pretraga po lokaciji"
+                    />
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                        <MapPinIcon className="h-5 w-5 text-gray-500" />
+                    </div>
+                </div>
+              </form>
 
               <div className="space-y-6 mb-8">
                   <NavLinks mobile={true} />

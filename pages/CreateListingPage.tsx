@@ -1,296 +1,342 @@
-import React, { useState } from 'react';
-import { Listing, User } from '../types';
-import { CATEGORIES } from '../constants';
+import React, { useState, useEffect } from 'react';
+import { Page, User, Listing } from '../types';
+import { CATEGORIES, LOCATIONS } from '../constants';
+import { CATEGORY_SPECIFIC_FIELDS } from '../data/categorySpecificFields';
 import { generateDescription } from '../services/geminiService';
 import { uploadImages } from '../services/uploadService';
-import { login, register } from '../services/authService';
-import { SparklesIcon, PhotoIcon, XIcon, PlusCircleIcon } from '../components/Icons';
+import { login, register, updateCurrentUser } from '../services/authService';
 import Spinner from '../components/Spinner';
 import LocationFilter from '../components/LocationFilter';
+import { CameraIcon, SparklesIcon, XIcon, Building2Icon } from '../components/Icons';
 
 interface CreateListingPageProps {
-  onAddListing: (listing: Listing) => void;
+  onNavigate: (page: Page) => void;
   currentUser: User | null;
+  onAddListing: (listing: Listing) => void;
   onAuthSuccess: (user: User) => void;
+  onUpdateUser: (user: User) => void;
 }
 
-const MAX_IMAGES = 10;
-
-const FormSection: React.FC<{ title: string; children: React.ReactNode; subtitle?: string; }> = ({ title, children, subtitle }) => (
-    <div className="pt-8">
-        <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
-        {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
-        <div className="mt-6 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">{children}</div>
-    </div>
-);
-
-const FormField: React.FC<{ label: string; htmlFor: string; className?: string; children: React.ReactNode }> = ({ label, htmlFor, className = "sm:col-span-3", children }) => (
-    <div className={className}>
-        <label htmlFor={htmlFor} className="block text-sm font-semibold text-gray-600">
-            {label}
-        </label>
-        <div className="mt-2">{children}</div>
-    </div>
-);
-
-const CreateListingPage: React.FC<CreateListingPageProps> = ({ onAddListing, currentUser, onAuthSuccess }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    category: '',
-    location: '',
-    price: '',
-    currency: 'EUR',
-    condition: 'used',
-    description: '',
-  });
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, currentUser, onAddListing, onAuthSuccess, onUpdateUser }) => {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
+  const [condition, setCondition] = useState<'new' | 'used'>('used');
+  const [price, setPrice] = useState('');
+  const [currency, setCurrency] = useState<'EUR' | 'RSD'>('EUR');
+  const [location, setLocation] = useState<string[]>([]);
+  const [specifics, setSpecifics] = useState<Record<string, any>>({});
+  
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  
+  const [isBusinessPost, setIsBusinessPost] = useState(false);
+
+  // Guest Auth State
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
+  const [authName, setAuthName] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
+
+  const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
-  const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
-  const [authData, setAuthData] = useState({ name: '', email: '', password: '' });
-
-  const inputClasses = "block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-800 shadow-sm";
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-  
-  const handleAuthInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setAuthData(prev => ({...prev, [name]: value }));
+  const handleSpecificsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setSpecifics(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      if (imageFiles.length + newFiles.length > MAX_IMAGES) {
-        setError(`Možete dodati najviše ${MAX_IMAGES} slika.`);
-        return;
-      }
-      setError('');
-      setImageFiles(prev => [...prev, ...newFiles]);
-      newFiles.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreviews(prev => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
-      });
-      e.target.value = '';
+      const files = Array.from(e.target.files);
+      const newFiles = [...imageFiles, ...files].slice(0, 10);
+      setImageFiles(newFiles);
+      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+      setImagePreviews(newPreviews);
     }
   };
 
-  const handleRemoveImage = (indexToRemove: number) => {
-    setImagePreviews(prev => prev.filter((_, index) => index !== indexToRemove));
-    setImageFiles(prev => prev.filter((_, index) => index !== indexToRemove));
-    setError('');
+  const handleRemoveImage = (index: number) => {
+    setImageFiles(files => files.filter((_, i) => i !== index));
+    setImagePreviews(previews => previews.filter((_, i) => i !== index));
   };
-
+  
   const handleGenerateDescription = async () => {
-    if (!formData.title) {
-        setError("Molimo unesite naslov oglasa pre generisanja opisa.");
-        return;
-    }
-    setError('');
-    setIsGenerating(true);
-    try {
-        const keywords = `${formData.title}, ${formData.category}, ${formData.location}, ${formData.condition === 'new' ? 'novo' : 'korišćeno'}`;
-        const description = await generateDescription(keywords);
-        setFormData(prev => ({ ...prev, description }));
-    } catch (err) {
-        setError('Došlo je do greške prilikom generisanja opisa. Molimo pokušajte ponovo.');
-        console.error(err);
-    } finally {
-        setIsGenerating(false);
-    }
+      if (!title) {
+          setError("Molimo unesite naslov oglasa pre generisanja opisa.");
+          return;
+      }
+      setIsGenerating(true);
+      setError('');
+      try {
+          const keywords = `${title}, ${category ? CATEGORIES.find(c=>c.id === category)?.name : ''}, ${location[0] || ''}, ${condition === 'new' ? 'novo' : 'korišćeno'}`;
+          const generated = await generateDescription(keywords);
+          setDescription(generated);
+      } catch (err) {
+          console.error(err);
+          setError("Došlo je do greške prilikom generisanja opisa.");
+      } finally {
+          setIsGenerating(false);
+      }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.category || !formData.location || !formData.description) {
-      setError("Molimo popunite sva obavezna polja za oglas.");
-      return;
-    }
-    if (imageFiles.length === 0) {
-      setError("Molimo dodajte barem jednu sliku.");
-      return;
+    if (!title || !category || location.length === 0) {
+        setError('Naslov, kategorija i lokacija su obavezna polja.');
+        return;
     }
     setError('');
-    setIsSubmitting(true);
-    let userForListing: User | null = currentUser;
+    setIsLoading(true);
+
     try {
-      if (!userForListing) {
-        if (!authData.email || !authData.password || (authMode === 'register' && !authData.name)) {
-          throw new Error("Molimo popunite sva polja za prijavu/registraciju.");
+        let userToPostWith = currentUser;
+
+        // Step 1: Handle Authentication if user is not logged in
+        if (!userToPostWith) {
+            if (authMode === 'register') {
+                if (authPassword !== authConfirmPassword) throw new Error("Lozinke se ne podudaraju.");
+                let newUser = await register(authName, authEmail, authPassword);
+                
+                if (isBusinessPost) {
+                    // Convert the newly registered user to a business account
+                    const businessUser = await updateCurrentUser({ ...newUser, accountType: 'business', businessName: authName });
+                    onUpdateUser(businessUser); // Update parent state for consistency
+                    userToPostWith = businessUser;
+                } else {
+                    userToPostWith = newUser;
+                }
+            } else { // Login mode
+                userToPostWith = await login(authEmail, authPassword);
+            }
+            onAuthSuccess(userToPostWith); // Log in the new/existing user in the app state
+        } 
+        else if (isBusinessPost && currentUser && currentUser.accountType === 'private') {
+            // Handle case where a logged-in private user wants to post as a business
+             const businessUser = await updateCurrentUser({ accountType: 'business', businessName: currentUser.name }); // Use existing name as business name
+             onUpdateUser(businessUser);
+             userToPostWith = businessUser;
         }
-        if (authMode === 'register') {
-          userForListing = await register(authData.name, authData.email, authData.password);
-        } else {
-          userForListing = await login(authData.email, authData.password);
+
+        if (!userToPostWith) {
+             throw new Error("Došlo je do greške prilikom autentifikacije. Molimo pokušajte ponovo.");
         }
-        onAuthSuccess(userForListing);
-      }
-      if (!userForListing) throw new Error("Autentifikacija nije uspela. Molimo pokušajte ponovo.");
-      
-      const uploadedImageUrls = await uploadImages(imageFiles);
-      const newListing: Listing = {
-        id: new Date().toISOString(),
-        ...formData,
-        price: parseFloat(formData.price) || 0,
-        currency: formData.currency as 'EUR' | 'RSD',
-        condition: formData.condition as 'new' | 'used',
-        images: uploadedImageUrls,
-        postedDate: new Date().toISOString(),
-        seller: { id: userForListing.id, name: userForListing.name, avatar: userForListing.avatar }
-      };
-      onAddListing(newListing);
+
+        // Step 2: Upload images and create listing
+        const imageUrls = await uploadImages(imageFiles);
+        const newListing: Listing = {
+            id: `listing-${Date.now()}`,
+            title,
+            description,
+            price: price ? parseFloat(price) : 0,
+            currency,
+            category,
+            condition,
+            location: location[0],
+            images: imageUrls,
+            seller: userToPostWith,
+            postedDate: new Date().toISOString(),
+            specifics,
+        };
+        onAddListing(newListing);
     } catch (err: any) {
-      setError(err.message || "Došlo je do greške. Molimo pokušajte ponovo.");
-    } finally {
-      setIsSubmitting(false);
+        setError(err.message || 'Došlo je do greške. Molimo pokušajte ponovo.');
+        setIsLoading(false);
     }
+    // Don't setIsLoading(false) here, because the page will navigate away on success
+  };
+
+  const renderImagePlaceholders = () => {
+    const placeholders = [];
+    const totalSlots = imagePreviews.length < 5 ? 5 : 10;
+    
+    for (let i = 0; i < totalSlots; i++) {
+        if (i < imagePreviews.length) {
+            placeholders.push(
+                <div key={`preview-${i}`} className="relative group aspect-square">
+                    <img src={imagePreviews[i]} alt={`Preview ${i}`} className="h-full w-full object-cover rounded-md" />
+                    <button type="button" onClick={() => handleRemoveImage(i)} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <XIcon className="h-4 w-4" />
+                    </button>
+                </div>
+            );
+        } else {
+            placeholders.push(
+                 <label key={`placeholder-${i}`} className="relative aspect-square flex items-center justify-center border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500 transition-colors">
+                    <CameraIcon className="h-8 w-8 text-gray-400" />
+                     <input id={`file-upload-${i}`} name="file-upload" type="file" multiple accept="image/*" onChange={handleImageChange} className="sr-only" />
+                </label>
+            );
+        }
+    }
+    return placeholders;
   };
   
-  const canUploadMore = imagePreviews.length < MAX_IMAGES;
+  const currentSpecificFields = CATEGORY_SPECIFIC_FIELDS[category] || [];
+  const formInputClasses = "block w-full rounded-md border-gray-300 py-2.5 px-4 bg-gray-50 placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm";
+  const formLabelClasses = "block text-sm font-medium leading-6 text-gray-700 mb-1.5";
+
 
   return (
-    <div className="bg-gray-50/50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
-            <div className="max-w-4xl mx-auto">
-                <div className="text-center">
-                    <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-800 tracking-tight">Postavite Vaš Oglas</h1>
-                    <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">Popunite formu ispod kako biste brzo i lako objavili Vaš oglas i doprli do hiljada kupaca.</p>
+    <div className="bg-gray-100 py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <form onSubmit={handleSubmit} className="max-w-5xl mx-auto bg-white p-8 rounded-2xl shadow-lg space-y-10">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Postavite Vaš Oglas</h1>
+            <p className="text-gray-600">Popunite detalje ispod da biste oglas učinili vidljivim hiljadama kupaca.</p>
+          </div>
+          
+          <hr/>
+          
+          {/* Main Details */}
+          <div className="space-y-6">
+             <h2 className="text-xl font-semibold text-gray-800">Detalji Oglasa</h2>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
+                <div className="sm:col-span-2">
+                    <label htmlFor="title" className={formLabelClasses}>Naslov oglasa*</label>
+                    <input type="text" id="title" value={title} onChange={e => setTitle(e.target.value)} required className={formInputClasses} placeholder="Npr. Odličan Volkswagen Golf 7"/>
                 </div>
-
-                <form onSubmit={handleSubmit} className="mt-12 bg-white p-8 md:p-12 rounded-2xl shadow-2xl space-y-8 divide-y divide-gray-200">
-                    <fieldset disabled={isSubmitting} className="contents">
-                        
-                        <FormSection title="Detalji Oglasa" subtitle="Unesite osnovne informacije o predmetu koji prodajete.">
-                            <FormField label="Naslov Oglasa" htmlFor="title" className="sm:col-span-6">
-                                <input type="text" name="title" id="title" value={formData.title} onChange={handleInputChange} required className={inputClasses} placeholder="Npr. VW Golf 7 2.0 TDI - Odlično stanje" />
-                            </FormField>
-                            <FormField label="Kategorija" htmlFor="category">
-                                <select name="category" id="category" value={formData.category} onChange={handleInputChange} required className={inputClasses}>
-                                <option value="">Izaberite kategoriju</option>
-                                {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
-                            </FormField>
-                             <FormField label="Lokacija" htmlFor="location">
-                                <LocationFilter
-                                selectedLocations={formData.location ? [formData.location] : []}
-                                onSelectionChange={(newLocations) => setFormData(prev => ({...prev, location: newLocations[0] || ''}))}
-                                singleSelection={true}
-                                placeholder="Izaberite lokaciju"
-                                />
-                            </FormField>
-                            <FormField label="Cena" htmlFor="price">
-                                <div className="flex rounded-lg shadow-sm">
-                                    <input type="number" name="price" id="price" value={formData.price} onChange={handleInputChange} placeholder="Opciono" className={`${inputClasses} rounded-r-none z-10`} />
-                                    <select name="currency" value={formData.currency} onChange={handleInputChange} className="block px-4 py-3 bg-gray-100 border border-gray-200 rounded-r-lg focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-800 shadow-sm -ml-px border-l-0">
-                                        <option>EUR</option>
-                                        <option>RSD</option>
-                                    </select>
-                                </div>
-                            </FormField>
-                            <FormField label="Stanje" htmlFor="condition">
-                                <select name="condition" id="condition" value={formData.condition} onChange={handleInputChange} required className={inputClasses}>
-                                    <option value="used">Korišćeno</option>
-                                    <option value="new">Novo</option>
-                                </select>
-                            </FormField>
-                        </FormSection>
-
-                        <FormSection title="Slike" subtitle={`Dodajte do ${MAX_IMAGES} slika. Prva slika će biti naslovna.`}>
-                           <div className="sm:col-span-6">
-                             <div className={`mt-2 flex justify-center items-center flex-col px-6 pt-8 pb-8 border-2 border-gray-300 border-dashed rounded-xl ${!canUploadMore ? 'bg-gray-100 cursor-not-allowed' : 'hover:border-blue-400 transition-colors'}`}>
-                                <div className="space-y-1 text-center">
-                                    <PhotoIcon className="mx-auto h-12 w-12 text-gray-400"/>
-                                    {canUploadMore ? (
-                                        <>
-                                        <div className="flex text-sm text-gray-600">
-                                            <label htmlFor="file-upload" className="relative bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 cursor-pointer">
-                                                <span>Izaberite fajlove</span>
-                                                <input id="file-upload" name="file-upload" type="file" multiple onChange={handleImageChange} className="sr-only" accept="image/png, image/jpeg, image/webp" disabled={!canUploadMore} />
-                                            </label>
-                                            <p className="pl-1">ili ih prevucite ovde</p>
-                                        </div>
-                                        <p className="text-xs text-gray-500">PNG, JPG, WEBP do 5MB</p>
-                                        </>
-                                    ) : (
-                                        <p className="text-sm text-gray-600 font-medium">Dostignut je maksimalan broj slika.</p>
-                                    )}
-                                </div>
-                            </div>
-                           </div>
-                            {imagePreviews.length > 0 && (
-                            <div className="sm:col-span-6 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                                {imagePreviews.map((preview, index) => (
-                                    <div key={index} className="relative group aspect-square">
-                                        <img src={preview} alt={`Pregled ${index + 1}`} className="h-full w-full object-cover rounded-lg shadow-md" />
-                                        <button type="button" onClick={() => handleRemoveImage(index)} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 hover:bg-black/75 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white" aria-label="Ukloni sliku">
-                                            <XIcon className="h-3 w-3" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                            )}
-                        </FormSection>
-
-                        <FormSection title="Opis Oglasa" subtitle="Detaljno opišite predmet. Što više detalja, veće su šanse za prodaju.">
-                             <div className="sm:col-span-6">
-                                <div className="flex justify-end mb-2">
-                                     <button type="button" onClick={handleGenerateDescription} disabled={isGenerating} className="flex items-center space-x-2 bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold py-2 px-3 rounded-lg transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-xs">
-                                        {isGenerating ? <Spinner size="sm" /> : <SparklesIcon className="h-4 w-4"/>}
-                                        <span>{isGenerating ? 'Generišem...' : 'Pomoć AI'}</span>
-                                     </button>
-                                </div>
-                                <textarea name="description" id="description" rows={10} value={formData.description} onChange={handleInputChange} required className={`${inputClasses} min-h-[200px]`}></textarea>
-                             </div>
-                        </FormSection>
-
-                        {!currentUser && (
-                            <FormSection title="Vaši Podaci" subtitle="Kreirajte nalog ili se prijavite da biste postavili oglas.">
-                                <div className="sm:col-span-6">
-                                    <div className="flex justify-center mb-6 border border-gray-200 rounded-lg p-1 bg-gray-50 max-w-sm mx-auto">
-                                        <button type="button" onClick={() => setAuthMode('register')} className={`w-1/2 py-2.5 rounded-md transition-all text-sm font-semibold ${authMode === 'register' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                                            Novi korisnik
-                                        </button>
-                                        <button type="button" onClick={() => setAuthMode('login')} className={`w-1/2 py-2.5 rounded-md transition-all text-sm font-semibold ${authMode === 'login' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                                            Postojeći korisnik
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-y-6 sm:grid-cols-6 sm:gap-x-4">
-                                        {authMode === 'register' && (
-                                            <FormField label="Ime i Prezime" htmlFor="auth-name" className="sm:col-span-6">
-                                                <input type="text" name="name" id="auth-name" value={authData.name} onChange={handleAuthInputChange} required={!currentUser && authMode === 'register'} className={inputClasses} />
-                                            </FormField>
-                                        )}
-                                        <FormField label="Email Adresa" htmlFor="auth-email" className={authMode === 'login' ? 'sm:col-span-3' : 'sm:col-span-3'}>
-                                            <input type="email" name="email" id="auth-email" value={authData.email} onChange={handleAuthInputChange} required={!currentUser} autoComplete="email" className={inputClasses} />
-                                        </FormField>
-                                        <FormField label="Lozinka" htmlFor="auth-password" className={authMode === 'login' ? 'sm:col-span-3' : 'sm:col-span-3'}>
-                                            <input type="password" name="password" id="auth-password" value={authData.password} onChange={handleAuthInputChange} required={!currentUser} autoComplete="current-password" className={inputClasses} />
-                                        </FormField>
-                                    </div>
-                                </div>
-                            </FormSection>
-                        )}
-                    </fieldset>
-
-                    <div className="pt-8">
-                         {error && <p className="text-red-600 text-sm mb-4 text-center font-semibold bg-red-50 p-3 rounded-lg">{error}</p>}
-                        <button type="submit" disabled={isSubmitting} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg text-lg transition-all duration-300 transform hover:scale-105 flex justify-center items-center space-x-3 disabled:bg-orange-300 disabled:cursor-not-allowed disabled:scale-100">
-                            {isSubmitting ? <Spinner /> : <PlusCircleIcon className="h-6 w-6" />}
-                            <span>{isSubmitting ? 'Objavljujem oglas...' : 'Postavi Oglas'}</span>
-                        </button>
+                 <div>
+                    <label htmlFor="category" className={formLabelClasses}>Kategorija*</label>
+                    <select id="category" value={category} onChange={e => { setCategory(e.target.value); setSpecifics({}); }} required className={formInputClasses}>
+                        <option value="">Izaberite kategoriju</option>
+                        {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="condition" className={formLabelClasses}>Stanje*</label>
+                    <select id="condition" value={condition} onChange={e => setCondition(e.target.value as 'new' | 'used')} required className={formInputClasses}>
+                        <option value="used">Korišćeno</option>
+                        <option value="new">Novo</option>
+                    </select>
+                </div>
+                 <div>
+                    <label htmlFor="price" className={formLabelClasses}>Cena</label>
+                    <div className="flex rounded-md shadow-sm">
+                        <input type="number" id="price" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" className={`${formInputClasses} rounded-r-none`}/>
+                        <select value={currency} onChange={e => setCurrency(e.target.value as 'EUR' | 'RSD')} className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-100 text-gray-600 text-sm">
+                            <option>EUR</option>
+                            <option>RSD</option>
+                        </select>
                     </div>
-                </form>
+                     <p className="text-xs text-gray-500 mt-1">Ostavite 0 za cenu po dogovoru.</p>
+                </div>
+                 <div>
+                    <label className={formLabelClasses}>Lokacija*</label>
+                    <LocationFilter selectedLocations={location} onSelectionChange={setLocation} singleSelection={true} />
+                </div>
+             </div>
+          </div>
+          
+           {/* Dynamic Specifics */}
+          {currentSpecificFields.length > 0 && (
+              <div className="space-y-6 transition-all duration-300">
+                  <h2 className="text-xl font-semibold text-gray-800">Specifikacije</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+                      {currentSpecificFields.map(field => (
+                         <div key={field.name}>
+                           <label htmlFor={field.name} className={formLabelClasses}>{field.label}{field.required ? '*' : ''}</label>
+                            {field.type === 'select' ? (
+                              <select name={field.name} id={field.name} value={specifics[field.name] || ''} onChange={handleSpecificsChange} required={field.required} className={formInputClasses}>
+                                  <option value="">Izaberite</option>
+                                  {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                              </select>
+                            ) : (
+                              <input type={field.type} name={field.name} id={field.name} value={specifics[field.name] || ''} onChange={handleSpecificsChange} placeholder={field.placeholder} required={field.required} className={formInputClasses} />
+                            )}
+                         </div>
+                      ))}
+                  </div>
+              </div>
+          )}
+
+          {/* Images */}
+           <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-gray-800">Slike (do 10)</h2>
+                <div className="grid grid-cols-5 gap-4">
+                    {renderImagePlaceholders()}
+                </div>
             </div>
-        </div>
+
+          {/* Description */}
+          <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-gray-800">Opis</h2>
+                  <button type="button" onClick={handleGenerateDescription} disabled={isGenerating} className="flex items-center gap-x-1.5 text-sm font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-wait">
+                      {isGenerating ? <Spinner size="sm" /> : <SparklesIcon className="h-5 w-5" />}
+                      <span>{isGenerating ? 'Generišem...' : 'Generiši sa AI'}</span>
+                  </button>
+              </div>
+              <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={6} className={formInputClasses} placeholder="Detaljno opišite predmet koji prodajete..."></textarea>
+          </div>
+          
+            {/* User Details / Authentication */}
+            {!currentUser && (
+               <>
+                 <hr/>
+                 <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                         <h2 className="text-xl font-semibold text-gray-800">Vaši podaci</h2>
+                         <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+                            <button type="button" onClick={() => setAuthMode('register')} className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-all ${authMode === 'register' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:bg-gray-200'}`}>Registracija</button>
+                            <button type="button" onClick={() => setAuthMode('login')} className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-all ${authMode === 'login' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:bg-gray-200'}`}>Prijava</button>
+                        </div>
+                    </div>
+                     
+                    {authMode === 'register' ? (
+                        <div className="space-y-6">
+                           <div className="flex items-center gap-x-3">
+                              <input type="checkbox" id="isBusiness" checked={isBusinessPost} onChange={e => setIsBusinessPost(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"/>
+                              <label htmlFor="isBusiness" className="flex items-center gap-x-2 font-medium text-gray-800">
+                                <Building2Icon className="h-5 w-5 text-gray-500"/>
+                                Registrujte se kao firma
+                              </label>
+                           </div>
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
+                                <div>
+                                    <label htmlFor="authName" className={formLabelClasses}>{isBusinessPost ? 'Naziv Firme*' : 'Ime i Prezime*'}</label>
+                                    <input type="text" id="authName" value={authName} onChange={e => setAuthName(e.target.value)} required className={formInputClasses} placeholder={isBusinessPost ? 'Vaša Firma D.O.O' : 'Pera Perić'}/>
+                                </div>
+                                 <div>
+                                    <label htmlFor="authEmail" className={formLabelClasses}>{isBusinessPost ? 'Email firme*' : 'Email*'}</label>
+                                    <input type="email" id="authEmail" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required className={formInputClasses} placeholder="vas.email@example.com"/>
+                                </div>
+                                <div>
+                                    <label htmlFor="authPassword" className={formLabelClasses}>Lozinka*</label>
+                                    <input type="password" id="authPassword" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required className={formInputClasses}/>
+                                </div>
+                                 <div>
+                                    <label htmlFor="authConfirmPassword" className={formLabelClasses}>Potvrdi lozinku*</label>
+                                    <input type="password" id="authConfirmPassword" value={authConfirmPassword} onChange={e => setAuthConfirmPassword(e.target.value)} required className={formInputClasses}/>
+                                </div>
+                           </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
+                             <div>
+                                <label htmlFor="authEmail" className={formLabelClasses}>Email*</label>
+                                <input type="email" id="authEmail" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required className={formInputClasses} placeholder="vas.email@example.com"/>
+                            </div>
+                             <div>
+                                <label htmlFor="authPassword" className={formLabelClasses}>Lozinka*</label>
+                                <input type="password" id="authPassword" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required className={formInputClasses}/>
+                            </div>
+                        </div>
+                    )}
+                 </div>
+               </>
+            )}
+
+          {/* Submission */}
+          {error && <p className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-md">{error}</p>}
+          <div className="pt-4 text-right">
+              <button type="submit" disabled={isLoading} className="w-full sm:w-auto inline-flex justify-center items-center gap-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-10 rounded-lg shadow-lg text-lg transition-all duration-300 disabled:bg-blue-400 disabled:cursor-wait">
+                  {isLoading ? <><Spinner /> Obrađujem...</> : 'Postavi Oglas'}
+              </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

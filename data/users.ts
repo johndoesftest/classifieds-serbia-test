@@ -1,38 +1,34 @@
 import { User } from '../types';
 
-// The key for storing the user database in localStorage.
+// The key for storing the users database in localStorage.
 const USERS_DB_KEY = 'oglasisrbija_users_db';
 
 // Initial "database" state. It will only be used the first time the app loads.
 const INITIAL_MOCK_USERS: User[] = [
-  {
-    id: 'user-1',
-    name: 'Marko Petrović',
-    email: 'marko@example.com',
-    avatar: 'https://i.pravatar.cc/150?u=marko',
-  },
-  {
-    id: 'user-2',
-    name: 'Jelena Jovanović',
-    email: 'jelena@example.com',
-    avatar: 'https://i.pravatar.cc/150?u=jelena',
-  },
-  {
-    id: 'user-3',
-    name: 'Nikola Nikolić',
-    email: 'nikola@example.com',
-    avatar: 'https://i.pravatar.cc/150?u=nikola',
-  }
+    { id: 'user-1', name: 'Marko Petrović', email: 'marko@example.com', avatar: 'https://i.pravatar.cc/150?u=marko', phone: '064 123 4567', accountType: 'private' },
+    { id: 'user-2', name: 'Jelena Jovanović', email: 'jelena.j@example.com', avatar: 'https://i.pravatar.cc/150?u=jelena', phone: '065 987 6543', accountType: 'private' },
+    { id: 'user-3', name: 'Nikola Nikolić', email: 'nikola.n@example.com', avatar: 'https://i.pravatar.cc/150?u=nikola', phone: '061 111 2222', accountType: 'private' },
+    { id: 'user-4', name: 'Petar Popović', email: 'petar.p@example.com', avatar: 'https://i.pravatar.cc/150?u=petar', phone: '069 876 5432', accountType: 'private' },
+    { id: 'user-5', name: 'Dragan Kostić', email: 'dragan.k@example.com', avatar: 'https://i.pravatar.cc/150?u=dragan', phone: '063 123 4567', accountType: 'private' },
+    { id: 'user-41', name: 'Ana Kovač', email: 'ana.kovac@example.com', avatar: 'https://i.pravatar.cc/150?u=ana', phone: '062 444 7766', accountType: 'private' },
 ];
+
+// In-memory cache to avoid constant JSON parsing
+let usersCache: User[] = [];
 
 /**
  * Retrieves the list of all users from localStorage.
  * @returns An array of User objects.
  */
 const getAllUsers = (): User[] => {
+  if (usersCache.length > 0) {
+    return usersCache;
+  }
   try {
     const usersJson = localStorage.getItem(USERS_DB_KEY);
-    return usersJson ? (JSON.parse(usersJson) as User[]) : [];
+    const users = usersJson ? (JSON.parse(usersJson) as User[]) : [];
+    usersCache = users;
+    return users;
   } catch (error) {
     console.error("Failed to parse users from storage", error);
     return [];
@@ -45,67 +41,50 @@ const getAllUsers = (): User[] => {
  */
 const saveAllUsers = (users: User[]): void => {
   localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
+  usersCache = users; // Update cache
 };
 
 /**
- * Initializes the user database in localStorage if it doesn't exist.
+ * Initializes the users database in localStorage if it doesn't exist.
  */
-const initializeUserDatabase = (): void => {
-  if (!localStorage.getItem(USERS_DB_KEY)) {
+const initializeUsersDatabase = (): void => {
+  const storedUsers = localStorage.getItem(USERS_DB_KEY);
+  if (!storedUsers) {
     saveAllUsers(INITIAL_MOCK_USERS);
+  } else {
+    // Ensure cache is loaded on startup
+    getAllUsers();
   }
 };
 
-// --- Public API for User Data ---
+// --- Exported Functions ---
 
-// Initialize the DB on module load, ensuring data is ready.
-initializeUserDatabase();
-
-/**
- * Finds a user by their email address (case-insensitive).
- * @param email The email to search for.
- * @returns The User object if found, otherwise undefined.
- */
 export const findUserByEmail = (email: string): User | undefined => {
-  const allUsers = getAllUsers();
-  return allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+  return getAllUsers().find(user => user.email.toLowerCase() === email.toLowerCase());
 };
 
-/**
- * Finds a user by their ID.
- * @param id The user ID to search for.
- * @returns The User object if found, otherwise undefined.
- */
 export const findUserById = (id: string): User | undefined => {
-  const allUsers = getAllUsers();
-  return allUsers.find(u => u.id === id);
+  return getAllUsers().find(user => user.id === id);
 };
 
-/**
- * Adds a new user to the database.
- * @param newUser The new user object to add.
- */
-export const addUser = (newUser: User): void => {
+export const addUser = (newUser: User): User => {
   const allUsers = getAllUsers();
   const updatedUsers = [...allUsers, newUser];
   saveAllUsers(updatedUsers);
+  return newUser;
 };
 
-/**
- * Updates a user in the database.
- * @param updatedUser The user object with updated information.
- * @returns The updated user object.
- * @throws An error if the user to update is not found.
- */
 export const updateUser = (updatedUser: User): User => {
   const allUsers = getAllUsers();
   const userIndex = allUsers.findIndex(u => u.id === updatedUser.id);
-
   if (userIndex === -1) {
-    throw new Error("Korisnik nije pronađen za ažuriranje.");
+    throw new Error("User not found.");
   }
-
-  allUsers[userIndex] = updatedUser;
-  saveAllUsers(allUsers);
+  const updatedUsers = [...allUsers];
+  updatedUsers[userIndex] = updatedUser;
+  saveAllUsers(updatedUsers);
   return updatedUser;
 };
+
+// Initialize the DB on module load.
+initializeUsersDatabase();
