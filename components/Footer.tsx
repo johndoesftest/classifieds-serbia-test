@@ -48,7 +48,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div>
             <h3 className="text-lg font-semibold text-white tracking-wider">Korisni Linkovi</h3>
             <ul className="mt-4 space-y-2">
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">O Nama</a></li>
+              <li><a href="#" onClick={(e) => { e.preventDefault(); onNavigate({ name: 'about' }); }} className="text-gray-400 hover:text-white transition-colors">O Nama</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Kontakt</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Pomoć i podrška</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Uslovi Korišćenja</a></li>

@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Page } from '../types';
+import { Page, User } from '../types';
 import { LogoIcon, PlusCircleIcon, MenuIcon, XIcon } from './Icons';
 
 interface HeaderProps {
   onNavigate: (page: Page) => void;
   currentPage: Page;
+  currentUser: User | null;
+  onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, onLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   // Close mobile menu on page navigation
   useEffect(() => {
@@ -83,6 +86,32 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage }) => {
                 <PlusCircleIcon className="h-5 w-5"/>
                 <span>Postavi Oglas</span>
               </button>
+
+              {currentUser ? (
+                <div className="relative">
+                  <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="flex items-center space-x-2">
+                    <img src={currentUser.avatar} alt={currentUser.name} className="h-8 w-8 rounded-full" />
+                    <span className="hidden lg:inline font-medium">{currentUser.name.split(' ')[0]}</span>
+                  </button>
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5">
+                      <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Moji Oglasi</a>
+                      <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Podešavanja</a>
+                      <button onClick={onLogout} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Odjavi se
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => onNavigate({ name: 'login' })}
+                  className="hidden md:block font-medium text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  Prijavi se
+                </button>
+              )}
+
               <div className="md:hidden">
                 <button onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Otvori meni">
                   <MenuIcon className="h-6 w-6 text-gray-700"/>
@@ -109,6 +138,23 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage }) => {
                 <PlusCircleIcon className="h-6 w-6"/>
                 <span>Postavi Oglas</span>
               </button>
+              <div className="border-t w-3/4 my-4"></div>
+              {currentUser ? (
+                <div className="flex flex-col items-center space-y-6">
+                   <div className="flex items-center space-x-3">
+                    <img src={currentUser.avatar} alt={currentUser.name} className="h-10 w-10 rounded-full" />
+                    <span className="text-xl font-medium">{currentUser.name}</span>
+                  </div>
+                  <a href="#" className="text-2xl text-gray-800">Moji Oglasi</a>
+                  <button onClick={onLogout} className="text-2xl text-red-600 font-medium">
+                    Odjavi se
+                  </button>
+                </div>
+              ) : (
+                 <button onClick={() => onNavigate({ name: 'login' })} className="text-2xl text-gray-800 font-medium">
+                  Prijavi se
+                </button>
+              )}
           </div>
       </div>
     </>

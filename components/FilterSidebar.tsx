@@ -1,7 +1,7 @@
-
 import React from 'react';
-import { CATEGORIES, LOCATIONS } from '../constants';
+import { CATEGORIES } from '../constants';
 import { FilterState } from '../types';
+import LocationFilter from './LocationFilter';
 
 interface FilterSidebarProps {
   filters: FilterState;
@@ -47,20 +47,15 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange, 
           </select>
         </div>
         <div>
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Lokacija</label>
-          <select
-            id="location"
-            name="location"
-            value={filters.location}
-            onChange={handleInputChange}
-            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Sve lokacije</option>
-            {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-          </select>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Lokacija</label>
+          <LocationFilter
+            selectedLocations={filters.location}
+            onSelectionChange={(newLocations) => onFilterChange({ ...filters, location: newLocations })}
+            placeholder="Pretražite lokacije..."
+          />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cena (EUR)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Cena <span className="text-xs text-gray-500">(samo za EUR)</span></label>
           <div className="flex items-center space-x-2">
             <input
               type="number"
@@ -106,4 +101,3 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange, 
 };
 
 export default FilterSidebar;
-   

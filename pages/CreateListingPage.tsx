@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Listing } from '../types';
-import { CATEGORIES, LOCATIONS } from '../constants';
+import { Listing, User } from '../types';
+import { CATEGORIES } from '../constants';
 import { generateDescription } from '../services/geminiService';
 import { uploadImages } from '../services/uploadService';
 import { SparklesIcon, PhotoIcon, XIcon } from '../components/Icons';
 import Spinner from '../components/Spinner';
+import LocationFilter from '../components/LocationFilter';
 
 interface CreateListingPageProps {
   onAddListing: (listing: Listing) => void;
+  currentUser: User;
 }
 
-const CreateListingPage: React.FC<CreateListingPageProps> = ({ onAddListing }) => {
+const CreateListingPage: React.FC<CreateListingPageProps> = ({ onAddListing, currentUser }) => {
   const [formData, setFormData] = useState({
     title: '',
     category: '',
@@ -102,7 +104,11 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onAddListing }) =
           condition: formData.condition as 'new' | 'used',
           images: uploadedImageUrls.length > 0 ? uploadedImageUrls : ['https://picsum.photos/seed/' + Math.random() + '/800/600'],
           postedDate: new Date().toISOString(),
-          seller: { name: 'Trenutni Korisnik', avatar: 'https://i.pravatar.cc/150?u=currentuser' }
+          seller: { 
+            id: currentUser.id,
+            name: currentUser.name, 
+            avatar: currentUser.avatar
+          }
         };
         onAddListing(newListing);
     } catch (uploadError) {
@@ -116,7 +122,8 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onAddListing }) =
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-2xl">
-        <h1 className="text-4xl font-bold text-center mb-8 text-gray-800">Postavite Vaš Oglas</h1>
+        <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">Postavite Vaš Oglas</h1>
+        <p className="text-center text-gray-500 mb-8">Oglašavate kao: <span className="font-semibold text-gray-700">{currentUser.name}</span></p>
         <form onSubmit={handleSubmit} className="space-y-6">
           <fieldset disabled={isUploading}>
             <div>
@@ -133,17 +140,19 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onAddListing }) =
               </div>
               <div>
                 <label htmlFor="location" className="block text-lg font-medium text-gray-700 mb-1">Lokacija</label>
-                <select name="location" id="location" value={formData.location} onChange={handleInputChange} required className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3">
-                  <option value="">Izaberite lokaciju</option>
-                  {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
+                <LocationFilter
+                  selectedLocations={formData.location ? [formData.location] : []}
+                  onSelectionChange={(newLocations) => setFormData(prev => ({...prev, location: newLocations[0] || ''}))}
+                  singleSelection={true}
+                  placeholder="Izaberite lokaciju"
+                />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="price" className="block text-lg font-medium text-gray-700 mb-1">Cena</label>
                 <div className="flex">
-                    <input type="number" name="price" id="price" value={formData.price} onChange={handleInputChange} className="w-full border-gray-300 rounded-l-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3" />
+                    <input type="number" name="price" id="price" value={formData.price} onChange={handleInputChange} placeholder="Ostavite prazno za 'Po dogovoru'" className="w-full border-gray-300 rounded-l-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3" />
                     <select name="currency" value={formData.currency} onChange={handleInputChange} className="border-gray-300 rounded-r-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3 bg-gray-50 border-l-0">
                         <option>EUR</option>
                         <option>RSD</option>
@@ -158,7 +167,7 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onAddListing }) =
                 </select>
               </div>
             </div>
-
+            
             <div>
               <label className="block text-lg font-medium text-gray-700 mb-1">Slike</label>
               <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">

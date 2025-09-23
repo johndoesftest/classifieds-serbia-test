@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Page, Listing, FilterState } from '../types';
 import FilterSidebar from '../components/FilterSidebar';
@@ -13,7 +12,7 @@ interface ListingsPageProps {
 const initialFilterState: FilterState = {
   searchTerm: '',
   category: '',
-  location: '',
+  location: [],
   minPrice: '',
   maxPrice: '',
   condition: '',
@@ -38,12 +37,26 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters,
     result = result.filter(listing => {
       const searchTermMatch = filters.searchTerm ? listing.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) : true;
       const categoryMatch = filters.category ? listing.category === filters.category : true;
-      const locationMatch = filters.location ? listing.location === filters.location : true;
-      const minPriceMatch = filters.minPrice ? listing.price >= parseFloat(filters.minPrice) : true;
-      const maxPriceMatch = filters.maxPrice ? listing.price <= parseFloat(filters.maxPrice) : true;
+      const locationMatch = filters.location.length > 0 ? filters.location.includes(listing.location) : true;
       const conditionMatch = filters.condition ? listing.condition === filters.condition : true;
 
-      return searchTermMatch && categoryMatch && locationMatch && minPriceMatch && maxPriceMatch && conditionMatch;
+      // Price filtering logic that handles currency
+      let priceMatch = true;
+      const minPrice = parseFloat(filters.minPrice);
+      const maxPrice = parseFloat(filters.maxPrice);
+      const hasPriceFilter = !isNaN(minPrice) || !isNaN(maxPrice);
+
+      if (hasPriceFilter) {
+        if (listing.currency !== 'EUR') {
+          priceMatch = false; // Filter out non-EUR listings if price filter is active
+        } else {
+          const minOk = isNaN(minPrice) || listing.price >= minPrice;
+          const maxOk = isNaN(maxPrice) || listing.price <= maxPrice;
+          priceMatch = minOk && maxOk;
+        }
+      }
+
+      return searchTermMatch && categoryMatch && locationMatch && conditionMatch && priceMatch;
     });
 
     // Sorting
@@ -106,4 +119,3 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters,
 };
 
 export default ListingsPage;
-   

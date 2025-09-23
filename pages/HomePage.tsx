@@ -10,7 +10,8 @@ import {
     LayersIcon,
     CursorArrowIcon,
     MapPinIcon,
-    QuoteIcon
+    QuoteIcon,
+    PlusCircleIcon
 } from '../components/Icons';
 
 interface HomePageProps {
@@ -29,35 +30,57 @@ const CategoryCard: React.FC<{ category: Category; onClick: () => void }> = ({ c
     </div>
 );
 
-const HowItWorksSection = () => (
-    <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <h2 className="text-3xl font-bold text-center mb-4">Kako Funkcioniše?</h2>
-        <p className="text-center text-gray-600 max-w-2xl mx-auto mb-12">Kupovina i prodaja nikada nisu bili jednostavniji. Pratite ova tri koraka:</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="bg-white p-8 rounded-lg shadow-lg">
-                <div className="bg-orange-100 rounded-full p-4 inline-block mb-4">
-                    <SearchIcon className="h-10 w-10 text-orange-500" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">1. Pretražite Oglas</h3>
-                <p className="text-gray-500">Pronađite šta vam je potrebno koristeći našu naprednu pretragu i filtere.</p>
+const HowItWorksSection = () => {
+    const [activeTab, setActiveTab] = useState<'buyers' | 'sellers'>('buyers');
+
+    const buyerSteps = [
+        { icon: SearchIcon, title: '1. Pretražite Oglas', description: 'Pronađite šta vam je potrebno koristeći našu naprednu pretragu i filtere.' },
+        { icon: ChatBubbleIcon, title: '2. Kontaktirajte Prodavca', description: 'Stupite u kontakt sa prodavcem direktno putem platforme.' },
+        { icon: HandshakeIcon, title: '3. Zaključite Dogovor', description: 'Dogovorite se o uslovima i obavite sigurnu kupovinu.' },
+    ];
+
+    const sellerSteps = [
+        { icon: PlusCircleIcon, title: '1. Postavite Oglas', description: 'Kreirajte detaljan oglas sa slikama i opisom za samo nekoliko minuta.' },
+        { icon: ChatBubbleIcon, title: '2. Primajte Upite', description: 'Odgovarajte na poruke i pozive zainteresovanih kupaca direktno.' },
+        { icon: HandshakeIcon, title: '3. Prodajte Predmet', description: 'Ugovorite prodaju, sretnite se sa kupcem i uspešno završite transakciju.' },
+    ];
+    
+    const steps = activeTab === 'buyers' ? buyerSteps : sellerSteps;
+
+    const tabButtonClasses = (tabName: 'buyers' | 'sellers') => `px-8 py-3 font-semibold rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-lg ${
+      activeTab === tabName 
+        ? 'bg-blue-600 text-white shadow-md' 
+        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+    }`;
+  
+    return (
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <h2 className="text-3xl font-bold text-center mb-4">Kako Funkcioniše?</h2>
+            <p className="text-center text-gray-600 max-w-2xl mx-auto mb-12">Jednostavni koraci za uspešnu kupovinu i prodaju na našoj platformi.</p>
+            
+            <div className="flex justify-center space-x-4 mb-12">
+                <button onClick={() => setActiveTab('buyers')} className={tabButtonClasses('buyers')}>
+                    Za Kupce
+                </button>
+                <button onClick={() => setActiveTab('sellers')} className={tabButtonClasses('sellers')}>
+                    Za Prodavce
+                </button>
             </div>
-            <div className="bg-white p-8 rounded-lg shadow-lg">
-                <div className="bg-orange-100 rounded-full p-4 inline-block mb-4">
-                    <ChatBubbleIcon className="h-10 w-10 text-orange-500" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">2. Kontaktirajte Prodavca</h3>
-                <p className="text-gray-500">Stupite u kontakt sa prodavcem direktno putem platforme.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                {steps.map((step, index) => (
+                    <div key={`${activeTab}-${index}`} className="bg-white p-8 rounded-lg shadow-lg">
+                        <div className="bg-orange-100 rounded-full p-4 inline-block mb-4">
+                            <step.icon className="h-10 w-10 text-orange-500" />
+                        </div>
+                        <h3 className="text-xl font-bold mb-2">{step.title}</h3>
+                        <p className="text-gray-500">{step.description}</p>
+                    </div>
+                ))}
             </div>
-            <div className="bg-white p-8 rounded-lg shadow-lg">
-                <div className="bg-orange-100 rounded-full p-4 inline-block mb-4">
-                    <HandshakeIcon className="h-10 w-10 text-orange-500" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">3. Zaključite Dogovor</h3>
-                <p className="text-gray-500">Dogovorite se o uslovima i obavite sigurnu kupovinu.</p>
-            </div>
-        </div>
-    </section>
-);
+        </section>
+    );
+};
 
 const WhyChooseUsSection = () => (
     <section className="bg-white py-20">
@@ -163,7 +186,17 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         onNavigate({ name: 'listings', filters: { searchTerm } });
     };
 
-    const featuredListings = MOCK_LISTINGS.slice(0, 4);
+    const latestListings = [...MOCK_LISTINGS]
+      .sort((a, b) => new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime())
+      .slice(0, 4);
+      
+    const carListings = MOCK_LISTINGS
+      .filter(l => l.category === 'automobili')
+      .slice(0, 4);
+      
+    const realEstateListings = MOCK_LISTINGS
+      .filter(l => l.category === 'nekretnine')
+      .slice(0, 4);
 
     return (
     <div className="space-y-16 pb-16 bg-gray-50">
@@ -208,20 +241,54 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             </div>
         </section>
 
-        {/* Featured Listings Section */}
+        {/* Latest Listings Section */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 pt-16">
             <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold">Izdvojeni Oglasi</h2>
+                <h2 className="text-3xl font-bold">Najnoviji Oglasi</h2>
                 <button onClick={() => onNavigate({name: 'listings'})} className="text-blue-600 font-semibold hover:underline">
                     Pogledaj sve
                 </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                {featuredListings.map(listing => (
+                {latestListings.map(listing => (
                     <ListingCard key={listing.id} listing={listing} onNavigate={onNavigate} />
                 ))}
             </div>
         </section>
+        
+        {/* Car Listings Section */}
+        {carListings.length > 0 && (
+            <section className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-3xl font-bold">Popularni Automobili</h2>
+                    <button onClick={() => onNavigate({name: 'listings', filters: { category: 'automobili' }})} className="text-blue-600 font-semibold hover:underline">
+                        Pogledaj sve
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {carListings.map(listing => (
+                        <ListingCard key={listing.id} listing={listing} onNavigate={onNavigate} />
+                    ))}
+                </div>
+            </section>
+        )}
+
+        {/* Real Estate Listings Section */}
+        {realEstateListings.length > 0 && (
+            <section className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-3xl font-bold">Aktuelno u Nekretninama</h2>
+                    <button onClick={() => onNavigate({name: 'listings', filters: { category: 'nekretnine' }})} className="text-blue-600 font-semibold hover:underline">
+                        Pogledaj sve
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {realEstateListings.map(listing => (
+                        <ListingCard key={listing.id} listing={listing} onNavigate={onNavigate} />
+                    ))}
+                </div>
+            </section>
+        )}
 
         {/* How It Works */}
         <HowItWorksSection />

@@ -19,22 +19,37 @@ export interface Listing {
   images: string[];
   postedDate: string;
   seller: {
+    id: string;
     name: string;
     avatar: string;
+    phone?: string;
+    email?: string;
   };
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
 }
 
 export type Page =
   | { name: 'home' }
   | { name: 'listings'; filters?: Partial<FilterState> }
   | { name: 'detail'; id: string }
-  | { name: 'create' };
+  | { name: 'create' }
+  | { name: 'about' }
+  | { name: 'login'; redirectPage?: Page }
+  | { name: 'register' }
+  | { name: 'forgot-password' }
+  | { name: 'reset-password'; token: string };
 
 
 export interface FilterState {
   searchTerm: string;
   category: string;
-  location: string;
+  location: string[];
   minPrice: string;
   maxPrice: string;
   condition: string;
