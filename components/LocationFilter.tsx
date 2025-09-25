@@ -9,6 +9,20 @@ interface LocationFilterProps {
   placeholder?: string;
 }
 
+// Fuzzy search function to find a pattern as a subsequence in a text.
+// E.g., 'nsd' will match 'Novi Sad', making search more forgiving.
+const fuzzySearch = (needle: string, haystack: string): boolean => {
+  const h = haystack.toLowerCase();
+  const n = needle.toLowerCase();
+  let nIndex = 0;
+  for (let i = 0; i < h.length && nIndex < n.length; i++) {
+    if (h[i] === n[nIndex]) {
+      nIndex++;
+    }
+  }
+  return nIndex === n.length;
+};
+
 const LocationFilter: React.FC<LocationFilterProps> = ({ 
   selectedLocations, 
   onSelectionChange, 
@@ -31,7 +45,7 @@ const LocationFilter: React.FC<LocationFilterProps> = ({
   }, [wrapperRef]);
 
   const filteredLocations = LOCATIONS.filter(loc =>
-    loc.toLowerCase().includes(searchTerm.toLowerCase())
+    fuzzySearch(searchTerm, loc)
   );
 
   const handleSelect = (location: string) => {
@@ -61,8 +75,9 @@ const LocationFilter: React.FC<LocationFilterProps> = ({
   return (
     <div className="relative" ref={wrapperRef}>
       <div 
-        className="flex flex-wrap gap-2 p-2 pr-10 border border-gray-300 rounded-md shadow-sm bg-white cursor-text w-full min-h-[42px] items-center"
+        className="flex flex-wrap gap-2 items-center w-full min-h-[3.2rem] cursor-text rounded-lg border border-gray-300 bg-white p-2.5 pr-10 transition-colors duration-150 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/30"
         onClick={handleContainerClick}
+        tabIndex={-1} // Make div focusable for focus-within
       >
         {selectedLocations.map(loc => (
           <span key={loc} className="flex items-center gap-1.5 bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-1 rounded-full">
@@ -83,7 +98,7 @@ const LocationFilter: React.FC<LocationFilterProps> = ({
           onChange={(e) => setSearchTerm(e.target.value)}
           onFocus={() => setIsOpen(true)}
           placeholder={selectedLocations.length === 0 ? placeholder : ''}
-          className="flex-grow border-none focus:ring-0 p-0 m-0 bg-transparent text-sm"
+          className="flex-grow border-none focus:ring-0 p-0 m-0 bg-transparent text-sm placeholder:text-gray-400"
           style={{ minWidth: '100px' }}
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">

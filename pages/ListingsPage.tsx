@@ -21,6 +21,20 @@ const initialFilterState: FilterState = {
 
 const LISTINGS_PER_PAGE = 9;
 
+// Fuzzy search function to find a pattern as a subsequence in a text.
+// This is more forgiving for typos or abbreviations than a simple `includes` check.
+const fuzzySearch = (needle: string, haystack: string): boolean => {
+  const h = haystack.toLowerCase();
+  const n = needle.toLowerCase();
+  let nIndex = 0;
+  for (let i = 0; i < h.length && nIndex < n.length; i++) {
+    if (h[i] === n[nIndex]) {
+      nIndex++;
+    }
+  }
+  return nIndex === n.length;
+};
+
 const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters, listings }) => {
   const [filters, setFilters] = useState<FilterState>({ ...initialFilterState, ...initialFilters });
   const [sortOrder, setSortOrder] = useState('newest');
@@ -44,12 +58,13 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters,
 
     // Filtering
     result = result.filter(listing => {
-      // Improved search term logic
+      // Fuzzy search for search term
       let searchTermMatch = true;
       if (filters.searchTerm) {
           const searchWords = filters.searchTerm.toLowerCase().split(' ').filter(word => word.length > 0);
-          const listingContent = `${listing.title} ${listing.description} ${listing.location}`.toLowerCase();
-          searchTermMatch = searchWords.every(word => listingContent.includes(word));
+          const listingContent = `${listing.title} ${listing.description} ${listing.location}`;
+          // All search words must be found as subsequences in the content
+          searchTermMatch = searchWords.every(word => fuzzySearch(word, listingContent));
       }
       
       const categoryMatch = filters.category ? listing.category === filters.category : true;
@@ -119,7 +134,7 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters,
                 id="sortOrder"
                 value={sortOrder}
                 onChange={e => setSortOrder(e.target.value)}
-                className="border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                className="border border-gray-300 rounded-lg py-2.5 px-4 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="newest">Najnovije</option>
                 <option value="price_asc">Cena: Niža ka Višoj</option>

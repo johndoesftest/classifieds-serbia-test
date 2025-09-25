@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CATEGORIES } from '../constants';
 import { FilterState } from '../types';
 import LocationFilter from './LocationFilter';
 import { SearchIcon } from './Icons';
+import { CATEGORY_FORM_CONFIG, ConditionOption } from '../data/categoryFormConfig';
+
 
 interface FilterSidebarProps {
   filters: FilterState;
@@ -19,6 +21,20 @@ const FilterSection: React.FC<{ title: string; children: React.ReactNode }> = ({
 
 
 const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange, onReset }) => {
+  const [conditionOptions, setConditionOptions] = useState<ConditionOption[]>(CATEGORY_FORM_CONFIG.default.conditionOptions!);
+
+  const categoryConfig = filters.category ? CATEGORY_FORM_CONFIG[filters.category] : CATEGORY_FORM_CONFIG.default;
+
+  useEffect(() => {
+      setConditionOptions(categoryConfig?.conditionOptions || []);
+      // If the current condition is not valid for the new category, reset it
+      if (categoryConfig && !categoryConfig.showCondition) {
+          onFilterChange({ ...filters, condition: '' });
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.category]);
+
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     onFilterChange({
       ...filters,
@@ -30,13 +46,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange, 
       onFilterChange({ ...filters, condition: value });
   };
   
-  const conditionOptions = [
-    { label: 'Sve', value: '' },
-    { label: 'Novo', value: 'new' },
-    { label: 'Korišćeno', value: 'used' }
-  ];
-
-  const inputClasses = "w-full border-gray-200 bg-gray-50 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors";
+  const inputClasses = "block w-full rounded-lg border border-gray-300 py-2.5 px-4 text-gray-800 placeholder:text-gray-400 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors duration-150";
   const buttonClasses = "w-full text-center py-2 px-2 rounded-md text-sm font-semibold transition-all";
 
   return (
@@ -53,7 +63,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange, 
       <div className="divide-y divide-gray-200">
         <FilterSection title="Pretraga">
             <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                     <SearchIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
@@ -109,19 +119,28 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange, 
           </div>
         </FilterSection>
 
-        <FilterSection title="Stanje">
-          <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
-            {conditionOptions.map(option => (
-              <button
-                key={option.value}
-                onClick={() => handleConditionChange(option.value)}
-                className={`${buttonClasses} ${filters.condition === option.value ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:bg-gray-200'}`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </FilterSection>
+        {categoryConfig?.showCondition && (
+          <FilterSection title="Stanje">
+            <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
+               <button
+                  key="sve"
+                  onClick={() => handleConditionChange('')}
+                  className={`${buttonClasses} ${filters.condition === '' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:bg-gray-200'}`}
+                >
+                  Sve
+                </button>
+              {conditionOptions.map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => handleConditionChange(option.value)}
+                  className={`${buttonClasses} ${filters.condition === option.value ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:bg-gray-200'}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+        )}
       </div>
     </div>
   );

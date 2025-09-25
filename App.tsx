@@ -112,6 +112,7 @@ function App() {
         currentPage={currentPage} 
         currentUser={currentUser}
         onLogout={handleLogout}
+        listings={listings}
       />
       <main className="flex-grow">
         {renderPage()}

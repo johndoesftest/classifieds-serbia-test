@@ -66,7 +66,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ token, onNavigate
               </h2>
             </div>
             <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-              <div className="rounded-md shadow-sm -space-y-px">
+              <div className="relative -space-y-px rounded-lg">
                 <div>
                   <label htmlFor="new-password" className="sr-only">Nova lozinka</label>
                   <input
@@ -76,7 +76,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ token, onNavigate
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    className="relative block w-full appearance-none rounded-none rounded-t-lg border border-gray-300 px-4 py-3 text-gray-800 placeholder-gray-400 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors duration-150"
                     placeholder="Nova lozinka"
                   />
                 </div>
@@ -89,7 +89,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ token, onNavigate
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    className="relative block w-full appearance-none rounded-none rounded-b-lg border border-gray-300 px-4 py-3 text-gray-800 placeholder-gray-400 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors duration-150"
                     placeholder="Potvrdite novu lozinku"
                   />
                 </div>

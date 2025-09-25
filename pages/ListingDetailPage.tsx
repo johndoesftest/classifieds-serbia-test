@@ -4,6 +4,7 @@ import { CATEGORIES, PLACEHOLDER_LISTING_IMAGE_URL, PLACEHOLDER_AVATAR_URL } fro
 import { MapPinIcon, ChevronLeftIcon, ChevronRightIcon, PhoneIcon, EmailIcon, FlagIcon, UserCircleIcon, CheckIcon } from '../components/Icons';
 import ListingCard from '../components/ListingCard';
 import { addReport } from '../data/reports';
+import { formatPrice, formatCondition, formatAddress } from '../utils/formatting';
 
 interface ListingDetailPageProps {
   listing: Listing;
@@ -22,10 +23,6 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNaviga
   const similarListings = listings
     .filter(l => l.category === listing.category && l.id !== listing.id)
     .slice(0, 4);
-
-  const formattedPrice = listing.price > 0
-    ? new Intl.NumberFormat('de-DE').format(listing.price) + ` ${listing.currency}`
-    : 'Po dogovoru';
 
   const handleNextImage = () => {
     setActiveImageIndex((prevIndex) => (prevIndex + 1) % listing.images.length);
@@ -79,16 +76,25 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNaviga
 
             {/* Listing Details */}
             <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="flex justify-between items-start">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                   <div>
-                    {category && <p className="font-semibold text-blue-600">{category.name}</p>}
-                    <h1 className="text-3xl font-bold text-gray-900 mt-1">{listing.title}</h1>
-                    <div className="flex items-center text-gray-500 mt-2">
-                      <MapPinIcon className="h-5 w-5 mr-1" />
-                      <span>{listing.location}</span>
+                    <div className="flex items-center gap-x-4">
+                      {category && <p className="font-semibold text-blue-600">{category.name}</p>}
+                      {listing.condition && (
+                         <span className={`text-sm font-bold px-3 py-1 rounded-full ${listing.condition === 'new' || listing.condition === 'new_build' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                           {formatCondition(listing.condition, listing.category)}
+                         </span>
+                      )}
                     </div>
+                    <h1 className="text-3xl font-bold text-gray-900 mt-2">{listing.title}</h1>
+                    {listing.location && (
+                      <div className="flex items-center text-gray-500 mt-2">
+                        <MapPinIcon className="h-5 w-5 mr-1" />
+                        <span>{formatAddress(listing)}</span>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-3xl font-extrabold text-orange-500 flex-shrink-0">{formattedPrice}</p>
+                  <p className="text-3xl font-extrabold text-orange-500 flex-shrink-0 self-start sm:self-auto sm:pt-12">{formatPrice(listing)}</p>
               </div>
               <div className="mt-6 border-t pt-6">
                 <h2 className="text-xl font-bold text-gray-800 mb-4">Opis</h2>
@@ -101,7 +107,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNaviga
                         {Object.entries(listing.specifics).map(([key, value]) => (
                             <div key={key}>
                                 <p className="text-sm text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
-                                <p className="font-semibold text-gray-800">{value}</p>
+                                <p className="font-semibold text-gray-800">{String(value)}</p>
                             </div>
                         ))}
                     </div>
@@ -186,7 +192,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNaviga
                                     onChange={(e) => setReportReason(e.target.value)}
                                     rows={4}
                                     required
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                    className="block w-full rounded-lg border border-gray-300 py-3 px-4 text-gray-800 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors duration-150"
                                     placeholder="Npr. oglas je lažan, cena nije tačna, predmet je prodat..."
                                 />
                                 <div className="mt-6 flex justify-end gap-x-3">

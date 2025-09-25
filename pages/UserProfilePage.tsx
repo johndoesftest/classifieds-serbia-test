@@ -105,6 +105,8 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, currentUser, 
   }
 
   const isBusinessProfile = profileUser.accountType === 'business';
+  const formInputClasses = "block w-full rounded-lg border border-gray-300 py-3 px-4 text-gray-800 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors duration-150";
+
 
   return (
     <>
@@ -166,14 +168,14 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, currentUser, 
                                 type="text" 
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
-                                className="text-3xl font-bold text-gray-900 bg-gray-100 border-gray-300 rounded-md w-full"
+                                className="text-3xl font-bold text-gray-900 bg-gray-50 border border-gray-300 rounded-lg w-full py-2 px-3 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-colors"
                             />
                              <input 
                                 type="text" 
                                 value={editPhone}
                                 onChange={(e) => setEditPhone(e.target.value)}
                                 placeholder="Broj telefona"
-                                className="text-lg text-gray-700 bg-gray-100 border-gray-300 rounded-md w-full"
+                                className={formInputClasses}
                             />
                        </div>
                    ) : (
@@ -286,12 +288,12 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, currentUser, 
                  <p className="text-gray-600 mb-6">Unesite podatke o Vašoj firmi da biste se predstavili kao poslovni korisnik.</p>
                  <div className="space-y-4">
                      <div>
-                        <label htmlFor="modalBusinessName" className="block text-sm font-medium text-gray-700 mb-1">Naziv Firme</label>
-                        <input type="text" id="modalBusinessName" value={businessName} onChange={e => setBusinessName(e.target.value)} required className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                        <label htmlFor="modalBusinessName" className="block text-sm font-medium text-gray-700 mb-2">Naziv Firme</label>
+                        <input type="text" id="modalBusinessName" value={businessName} onChange={e => setBusinessName(e.target.value)} required className={formInputClasses}/>
                     </div>
                      <div>
-                        <label htmlFor="modalBusinessDescription" className="block text-sm font-medium text-gray-700 mb-1">Opis Firme</label>
-                        <textarea id="modalBusinessDescription" value={businessDescription} onChange={e => setBusinessDescription(e.target.value)} rows={4} required className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        <label htmlFor="modalBusinessDescription" className="block text-sm font-medium text-gray-700 mb-2">Opis Firme</label>
+                        <textarea id="modalBusinessDescription" value={businessDescription} onChange={e => setBusinessDescription(e.target.value)} rows={4} required className={formInputClasses}></textarea>
                     </div>
                  </div>
                  <div className="mt-8 flex justify-end">

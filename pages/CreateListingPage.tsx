@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Page, User, Listing } from '../types';
-import { CATEGORIES, LOCATIONS } from '../constants';
+import { CATEGORIES } from '../constants';
 import { CATEGORY_SPECIFIC_FIELDS } from '../data/categorySpecificFields';
+import { CATEGORY_FORM_CONFIG } from '../data/categoryFormConfig';
 import { generateDescription } from '../services/geminiService';
 import { uploadImages } from '../services/uploadService';
 import { login, register, updateCurrentUser } from '../services/authService';
@@ -21,8 +22,9 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [condition, setCondition] = useState<'new' | 'used'>('used');
+  const [condition, setCondition] = useState<Listing['condition']>('used');
   const [price, setPrice] = useState('');
+  const [priceType, setPriceType] = useState<Listing['priceType']>('fixed');
   const [currency, setCurrency] = useState<'EUR' | 'RSD'>('EUR');
   const [location, setLocation] = useState<string[]>([]);
   const [specifics, setSpecifics] = useState<Record<string, any>>({});
@@ -42,6 +44,17 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
+
+  const categoryConfig = category ? CATEGORY_FORM_CONFIG[category] : null;
+  const isLocationRequired = category === 'nekretnine';
+
+  useEffect(() => {
+    // Reset fields when category changes
+    setSpecifics({});
+    const defaultConfig = CATEGORY_FORM_CONFIG.default;
+    setCondition(categoryConfig?.conditionOptions?.[0]?.value || defaultConfig.conditionOptions![0].value);
+    setPriceType(categoryConfig?.priceTypes?.[0]?.value || defaultConfig.priceTypes![0].value);
+  }, [category, categoryConfig]);
   
   const handleSpecificsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setSpecifics(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -70,7 +83,7 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
       setIsGenerating(true);
       setError('');
       try {
-          const keywords = `${title}, ${category ? CATEGORIES.find(c=>c.id === category)?.name : ''}, ${location[0] || ''}, ${condition === 'new' ? 'novo' : 'korišćeno'}`;
+          const keywords = `${title}, ${category ? CATEGORIES.find(c=>c.id === category)?.name : ''}, ${location[0] || ''}, ${condition || ''}`;
           const generated = await generateDescription(keywords);
           setDescription(generated);
       } catch (err) {
@@ -83,8 +96,8 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !category || location.length === 0) {
-        setError('Naslov, kategorija i lokacija su obavezna polja.');
+    if (!title || !category || (isLocationRequired && location.length === 0)) {
+        setError('Naslov, kategorija i grad (za nekretnine) su obavezna polja.');
         return;
     }
     setError('');
@@ -100,21 +113,19 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
                 let newUser = await register(authName, authEmail, authPassword);
                 
                 if (isBusinessPost) {
-                    // Convert the newly registered user to a business account
                     const businessUser = await updateCurrentUser({ ...newUser, accountType: 'business', businessName: authName });
-                    onUpdateUser(businessUser); // Update parent state for consistency
+                    onUpdateUser(businessUser);
                     userToPostWith = businessUser;
                 } else {
                     userToPostWith = newUser;
                 }
-            } else { // Login mode
+            } else {
                 userToPostWith = await login(authEmail, authPassword);
             }
-            onAuthSuccess(userToPostWith); // Log in the new/existing user in the app state
+            onAuthSuccess(userToPostWith);
         } 
         else if (isBusinessPost && currentUser && currentUser.accountType === 'private') {
-            // Handle case where a logged-in private user wants to post as a business
-             const businessUser = await updateCurrentUser({ accountType: 'business', businessName: currentUser.name }); // Use existing name as business name
+             const businessUser = await updateCurrentUser({ accountType: 'business', businessName: currentUser.name });
              onUpdateUser(businessUser);
              userToPostWith = businessUser;
         }
@@ -130,10 +141,11 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
             title,
             description,
             price: price ? parseFloat(price) : 0,
+            priceType,
             currency,
             category,
-            condition,
-            location: location[0],
+            condition: categoryConfig?.showCondition ? condition : undefined,
+            location: location.length > 0 ? location[0] : undefined,
             images: imageUrls,
             seller: userToPostWith,
             postedDate: new Date().toISOString(),
@@ -144,7 +156,6 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
         setError(err.message || 'Došlo je do greške. Molimo pokušajte ponovo.');
         setIsLoading(false);
     }
-    // Don't setIsLoading(false) here, because the page will navigate away on success
   };
 
   const renderImagePlaceholders = () => {
@@ -155,7 +166,7 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
         if (i < imagePreviews.length) {
             placeholders.push(
                 <div key={`preview-${i}`} className="relative group aspect-square">
-                    <img src={imagePreviews[i]} alt={`Preview ${i}`} className="h-full w-full object-cover rounded-md" />
+                    <img src={imagePreviews[i]} alt={`Preview ${i}`} className="h-full w-full object-cover rounded-lg" />
                     <button type="button" onClick={() => handleRemoveImage(i)} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <XIcon className="h-4 w-4" />
                     </button>
@@ -163,8 +174,9 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
             );
         } else {
             placeholders.push(
-                 <label key={`placeholder-${i}`} className="relative aspect-square flex items-center justify-center border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500 transition-colors">
-                    <CameraIcon className="h-8 w-8 text-gray-400" />
+                 <label key={`placeholder-${i}`} className="relative aspect-square flex flex-col items-center justify-center border-2 border-gray-200 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 hover:border-blue-400 transition-colors">
+                    <CameraIcon className="h-8 w-8 text-gray-400 mb-1" />
+                    <span className="text-xs font-semibold text-gray-500">Dodaj sliku</span>
                      <input id={`file-upload-${i}`} name="file-upload" type="file" multiple accept="image/*" onChange={handleImageChange} className="sr-only" />
                 </label>
             );
@@ -174,8 +186,11 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
   };
   
   const currentSpecificFields = CATEGORY_SPECIFIC_FIELDS[category] || [];
-  const formInputClasses = "block w-full rounded-md border-gray-300 py-2.5 px-4 bg-gray-50 placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm";
-  const formLabelClasses = "block text-sm font-medium leading-6 text-gray-700 mb-1.5";
+  const addressField = currentSpecificFields.find(f => f.name === 'address');
+  const otherSpecificFields = currentSpecificFields.filter(f => f.name !== 'address');
+
+  const formInputClasses = "block w-full rounded-lg border border-gray-300 py-3 px-4 text-gray-800 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors duration-150";
+  const formLabelClasses = "block text-sm font-medium leading-6 text-gray-700 mb-2";
 
 
   return (
@@ -199,42 +214,67 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
                 </div>
                  <div>
                     <label htmlFor="category" className={formLabelClasses}>Kategorija*</label>
-                    <select id="category" value={category} onChange={e => { setCategory(e.target.value); setSpecifics({}); }} required className={formInputClasses}>
+                    <select id="category" value={category} onChange={e => { setCategory(e.target.value); }} required className={formInputClasses}>
                         <option value="">Izaberite kategoriju</option>
                         {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                     </select>
                 </div>
-                <div>
-                    <label htmlFor="condition" className={formLabelClasses}>Stanje*</label>
-                    <select id="condition" value={condition} onChange={e => setCondition(e.target.value as 'new' | 'used')} required className={formInputClasses}>
-                        <option value="used">Korišćeno</option>
-                        <option value="new">Novo</option>
-                    </select>
-                </div>
-                 <div>
-                    <label htmlFor="price" className={formLabelClasses}>Cena</label>
-                    <div className="flex rounded-md shadow-sm">
-                        <input type="number" id="price" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" className={`${formInputClasses} rounded-r-none`}/>
-                        <select value={currency} onChange={e => setCurrency(e.target.value as 'EUR' | 'RSD')} className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-100 text-gray-600 text-sm">
-                            <option>EUR</option>
-                            <option>RSD</option>
+                
+                {category && categoryConfig?.showCondition && (
+                    <div>
+                        <label htmlFor="condition" className={formLabelClasses}>Stanje*</label>
+                        <select id="condition" value={condition} onChange={e => setCondition(e.target.value as Listing['condition'])} required className={formInputClasses}>
+                            {categoryConfig.conditionOptions?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                         </select>
                     </div>
-                     <p className="text-xs text-gray-500 mt-1">Ostavite 0 za cenu po dogovoru.</p>
-                </div>
-                 <div>
-                    <label className={formLabelClasses}>Lokacija*</label>
-                    <LocationFilter selectedLocations={location} onSelectionChange={setLocation} singleSelection={true} />
+                )}
+
+                 {category && categoryConfig?.showPrice && (
+                    <div>
+                        <label htmlFor="price" className={formLabelClasses}>{categoryConfig.priceLabel}</label>
+                        <div className="flex rounded-lg">
+                            <input type="number" id="price" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" className={`${formInputClasses} ${categoryConfig.priceTypes || categoryConfig.showCurrency ? 'rounded-r-none' : ''} z-10`}/>
+                            
+                            {categoryConfig.priceTypes && (
+                                <select value={priceType} onChange={e => setPriceType(e.target.value as Listing['priceType'])} className={`inline-flex items-center px-3 border border-l-0 border-gray-300 bg-gray-50 text-gray-600 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${categoryConfig.showCurrency ? '' : 'rounded-r-lg'}`}>
+                                    {categoryConfig.priceTypes.map(pt => <option key={pt.value} value={pt.value}>{pt.label}</option>)}
+                                </select>
+                            )}
+
+                            {categoryConfig.showCurrency && (
+                                <select value={currency} onChange={e => setCurrency(e.target.value as 'EUR' | 'RSD')} className="inline-flex items-center px-3 rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 text-gray-600 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                                    <option>EUR</option>
+                                    <option>RSD</option>
+                                </select>
+                            )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Ostavite 0 za cenu po dogovoru.</p>
+                    </div>
+                 )}
+
+                <div className="sm:col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
+                        <div>
+                            <label className={formLabelClasses}>Grad{isLocationRequired ? '*' : ''}</label>
+                            <LocationFilter selectedLocations={location} onSelectionChange={setLocation} singleSelection={true} />
+                        </div>
+                        {category && addressField && (
+                            <div>
+                                <label htmlFor={addressField.name} className={formLabelClasses}>{addressField.label}{addressField.required ? '*' : ''}</label>
+                                <input type={addressField.type as 'text' | 'number'} name={addressField.name} id={addressField.name} value={specifics[addressField.name] || ''} onChange={handleSpecificsChange} placeholder={addressField.placeholder} required={addressField.required} className={formInputClasses} />
+                            </div>
+                        )}
+                    </div>
                 </div>
              </div>
           </div>
           
            {/* Dynamic Specifics */}
-          {currentSpecificFields.length > 0 && (
+          {otherSpecificFields.length > 0 && (
               <div className="space-y-6 transition-all duration-300">
                   <h2 className="text-xl font-semibold text-gray-800">Specifikacije</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
-                      {currentSpecificFields.map(field => (
+                      {otherSpecificFields.map(field => (
                          <div key={field.name}>
                            <label htmlFor={field.name} className={formLabelClasses}>{field.label}{field.required ? '*' : ''}</label>
                             {field.type === 'select' ? (
@@ -304,11 +344,11 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
                                 </div>
                                 <div>
                                     <label htmlFor="authPassword" className={formLabelClasses}>Lozinka*</label>
-                                    <input type="password" id="authPassword" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required className={formInputClasses}/>
+                                    <input type="password" id="authPassword" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required className={formInputClasses} placeholder="********"/>
                                 </div>
                                  <div>
                                     <label htmlFor="authConfirmPassword" className={formLabelClasses}>Potvrdi lozinku*</label>
-                                    <input type="password" id="authConfirmPassword" value={authConfirmPassword} onChange={e => setAuthConfirmPassword(e.target.value)} required className={formInputClasses}/>
+                                    <input type="password" id="authConfirmPassword" value={authConfirmPassword} onChange={e => setAuthConfirmPassword(e.target.value)} required className={formInputClasses} placeholder="********"/>
                                 </div>
                            </div>
                         </div>
@@ -320,7 +360,7 @@ const CreateListingPage: React.FC<CreateListingPageProps> = ({ onNavigate, curre
                             </div>
                              <div>
                                 <label htmlFor="authPassword" className={formLabelClasses}>Lozinka*</label>
-                                <input type="password" id="authPassword" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required className={formInputClasses}/>
+                                <input type="password" id="authPassword" value={authPassword} onChange={e => setAuthPassword(e.target.value)} required className={formInputClasses} placeholder="********"/>
                             </div>
                         </div>
                     )}

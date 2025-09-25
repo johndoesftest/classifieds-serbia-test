@@ -1,21 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Page, User } from '../types';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Page, User, Listing } from '../types';
 import { LogoIcon, PlusCircleIcon, MenuIcon, XIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, SearchIcon, MapPinIcon } from './Icons';
-import { PLACEHOLDER_AVATAR_URL } from '../constants';
+import { PLACEHOLDER_AVATAR_URL, LOCATIONS, CATEGORIES } from '../constants';
+import SearchInputWithSuggestions from './SearchInputWithSuggestions';
 
 interface HeaderProps {
   onNavigate: (page: Page) => void;
   currentPage: Page;
   currentUser: User | null;
   onLogout: () => void;
+  listings: Listing[];
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, onLogout, listings }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [location, setLocation] = useState('');
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const keywordSuggestions = useMemo(() => {
+    const categoryNames = CATEGORIES.map(c => c.name);
+    const titleKeywords = new Set<string>();
+    listings.forEach(listing => {
+      listing.title.toLowerCase().split(' ').forEach(word => {
+        if (word.length > 3 && isNaN(parseInt(word))) {
+          titleKeywords.add(word.replace(/[^a-z0-9]/gi, ''));
+        }
+      });
+    });
+    return [...new Set([...categoryNames, ...Array.from(titleKeywords)])];
+  }, [listings]);
+
+  const locationSuggestions = LOCATIONS;
 
   // Close menus on page navigation or click outside
   useEffect(() => {
@@ -115,28 +132,27 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
                 {currentPage.name !== 'home' && (
                   <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-full max-w-xl">
                     <div className="flex items-center bg-gray-100 rounded-full transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500">
-                        <div className="flex items-center flex-1 pl-4">
-                            <SearchIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                            <input 
-                                type="text"
-                                value={keyword}
-                                onChange={(e) => setKeyword(e.target.value)}
-                                placeholder="Šta tražite?"
-                                className="w-full p-2.5 border-none text-gray-700 focus:ring-0 text-sm bg-transparent"
-                                aria-label="Pretraga po ključnoj reči"
-                            />
-                        </div>
-                        <div className="flex items-center flex-1 pl-2 border-l border-gray-200">
-                            <MapPinIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                            <input 
-                                type="text"
-                                value={location}
-                                onChange={(e) => setLocation(e.target.value)}
-                                placeholder="Lokacija"
-                                className="w-full p-2.5 border-none text-gray-700 focus:ring-0 text-sm bg-transparent"
-                                aria-label="Pretraga po lokaciji"
-                            />
-                        </div>
+                        <SearchInputWithSuggestions
+                            value={keyword}
+                            onChange={setKeyword}
+                            placeholder="Šta tražite?"
+                            suggestions={keywordSuggestions}
+                            icon={<SearchIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />}
+                            ariaLabel="Pretraga po ključnoj reči"
+                            inputClassName="w-full p-2.5 pl-11 border-none text-gray-700 focus:ring-0 text-sm bg-transparent"
+                            iconContainerClassName="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
+                        />
+                        <div className="border-l border-gray-200 h-6"></div>
+                        <SearchInputWithSuggestions
+                            value={location}
+                            onChange={setLocation}
+                            placeholder="Lokacija"
+                            suggestions={locationSuggestions}
+                            icon={<MapPinIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />}
+                            ariaLabel="Pretraga po lokaciji"
+                            inputClassName="w-full p-2.5 pl-11 border-none text-gray-700 focus:ring-0 text-sm bg-transparent"
+                            iconContainerClassName="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
+                        />
                     </div>
                   </form>
                 )}
@@ -233,31 +249,29 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
                 ) : null}
 
               <form onSubmit={handleSearchSubmit} className="mb-8 space-y-4">
-                <div className="relative">
-                    <input
-                        type="text"
-                        value={keyword}
-                        onChange={(e) => setKeyword(e.target.value)}
-                        placeholder="Šta tražite?"
-                        className="w-full bg-gray-100 border-transparent rounded-full py-3 pl-12 pr-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        aria-label="Pretraga po ključnoj reči"
-                    />
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                        <SearchIcon className="h-5 w-5 text-gray-500" />
-                    </div>
+                <div className="bg-gray-100 rounded-full">
+                  <SearchInputWithSuggestions
+                    value={keyword}
+                    onChange={setKeyword}
+                    placeholder="Šta tražite?"
+                    suggestions={keywordSuggestions}
+                    icon={<SearchIcon className="h-5 w-5 text-gray-500" />}
+                    ariaLabel="Pretraga po ključnoj reči"
+                    inputClassName="w-full bg-transparent border-transparent rounded-full py-3 pl-12 pr-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    iconContainerClassName="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
+                  />
                 </div>
-                <div className="relative">
-                    <input
-                        type="text"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="Lokacija"
-                        className="w-full bg-gray-100 border-transparent rounded-full py-3 pl-12 pr-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        aria-label="Pretraga po lokaciji"
-                    />
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                        <MapPinIcon className="h-5 w-5 text-gray-500" />
-                    </div>
+                <div className="bg-gray-100 rounded-full">
+                  <SearchInputWithSuggestions
+                    value={location}
+                    onChange={setLocation}
+                    placeholder="Lokacija"
+                    suggestions={locationSuggestions}
+                    icon={<MapPinIcon className="h-5 w-5 text-gray-500" />}
+                    ariaLabel="Pretraga po lokaciji"
+                    inputClassName="w-full bg-transparent border-transparent rounded-full py-3 pl-12 pr-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    iconContainerClassName="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
+                  />
                 </div>
               </form>
 

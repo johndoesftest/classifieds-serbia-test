@@ -31,10 +31,11 @@ export interface Listing {
   title: string;
   description: string;
   price: number;
+  priceType?: 'fixed' | 'per_hour' | 'salary_monthly' | 'salary_yearly'; // 'negotiable' is implicit when price is 0
   currency: 'EUR' | 'RSD';
   category: string; // Corresponds to Category.id
-  condition: 'new' | 'used';
-  location: string;
+  condition?: 'new' | 'used' | 'new_build' | 'renovation_needed';
+  location?: string;
   images: string[];
   seller: User;
   postedDate: string; // ISO date string

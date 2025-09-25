@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Page, Category, Listing } from '../types';
-import { CATEGORIES } from '../constants';
+import { CATEGORIES, LOCATIONS } from '../constants';
 import ListingCard from '../components/ListingCard';
 import { 
     SearchIcon, 
     ChatBubbleIcon, 
     HandshakeIcon,
-    LayersIcon,
-    CursorArrowIcon,
     MapPinIcon,
-    QuoteIcon,
     PlusCircleIcon
 } from '../components/Icons';
+import SearchInputWithSuggestions from '../components/SearchInputWithSuggestions';
 
 interface HomePageProps {
   onNavigate: (page: Page) => void;
@@ -30,149 +28,109 @@ const CategoryCard: React.FC<{ category: Category; onClick: () => void }> = ({ c
     </div>
 );
 
-const HowItWorksSection = () => {
-    const [activeTab, setActiveTab] = useState<'buyers' | 'sellers'>('buyers');
+interface StepProps {
+    icon: React.FC<any>;
+    title: string;
+    description: string;
+    isLast: boolean;
+}
 
+const Step: React.FC<StepProps> = ({ icon: Icon, title, description, isLast }) => (
+    <div className="flex">
+        <div className="flex flex-col items-center mr-4">
+            <div>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 ring-8 ring-blue-50">
+                    <Icon className="w-6 h-6" />
+                </div>
+            </div>
+            {!isLast && <div className="w-px h-full bg-gray-300" />}
+        </div>
+        <div className="pb-10">
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <p className="mt-1 text-gray-600">{description}</p>
+        </div>
+    </div>
+);
+
+const HowItWorksSection = () => {
     const buyerSteps = [
-        { icon: SearchIcon, title: '1. Pretražite Oglas', description: 'Pronađite šta vam je potrebno koristeći našu naprednu pretragu i filtere.' },
-        { icon: ChatBubbleIcon, title: '2. Kontaktirajte Prodavca', description: 'Stupite u kontakt sa prodavcem direktno putem platforme.' },
-        { icon: HandshakeIcon, title: '3. Zaključite Dogovor', description: 'Dogovorite se o uslovima i obavite sigurnu kupovinu.' },
+        { icon: SearchIcon, title: 'Pretražite Oglas', description: 'Pronađite šta vam je potrebno koristeći našu naprednu pretragu i filtere.' },
+        { icon: ChatBubbleIcon, title: 'Kontaktirajte Prodavca', description: 'Stupite u kontakt sa prodavcem direktno putem platforme.' },
+        { icon: HandshakeIcon, title: 'Zaključite Dogovor', description: 'Dogovorite se o uslovima i obavite sigurnu kupovinu.' },
     ];
 
     const sellerSteps = [
-        { icon: PlusCircleIcon, title: '1. Postavite Oglas', description: 'Kreirajte detaljan oglas sa slikama i opisom za samo nekoliko minuta.' },
-        { icon: ChatBubbleIcon, title: '2. Primajte Upite', description: 'Odgovarajte na poruke i pozive zainteresovanih kupaca direktno.' },
-        { icon: HandshakeIcon, title: '3. Prodajte Predmet', description: 'Ugovorite prodaju, sretnite se sa kupcem i uspešno završite transakciju.' },
+        { icon: PlusCircleIcon, title: 'Postavite Oglas', description: 'Kreirajte detaljan oglas sa slikama i opisom za samo nekoliko minuta.' },
+        { icon: ChatBubbleIcon, title: 'Primajte Upite', description: 'Odgovarajte na poruke i pozive zainteresovanih kupaca direktno.' },
+        { icon: HandshakeIcon, title: 'Prodajte Predmet', description: 'Ugovorite prodaju, sretnite se sa kupcem i uspešno završite transakciju.' },
     ];
-    
-    const steps = activeTab === 'buyers' ? buyerSteps : sellerSteps;
 
-    const tabButtonClasses = (tabName: 'buyers' | 'sellers') => `px-8 py-3 font-semibold rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-lg ${
-      activeTab === tabName 
-        ? 'bg-blue-600 text-white shadow-md' 
-        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-    }`;
-  
     return (
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <h2 className="text-3xl font-bold text-center mb-4">Kako Funkcioniše?</h2>
-            <p className="text-center text-gray-600 max-w-2xl mx-auto mb-12">Jednostavni koraci za uspešnu kupovinu i prodaju na našoj platformi.</p>
-            
-            <div className="flex justify-center space-x-4 mb-12">
-                <button onClick={() => setActiveTab('buyers')} className={tabButtonClasses('buyers')}>
-                    Za Kupce
-                </button>
-                <button onClick={() => setActiveTab('sellers')} className={tabButtonClasses('sellers')}>
-                    Za Prodavce
-                </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                {steps.map((step, index) => (
-                    <div key={`${activeTab}-${index}`} className="bg-white p-8 rounded-lg shadow-lg">
-                        <div className="bg-orange-100 rounded-full p-4 inline-block mb-4">
-                            <step.icon className="h-10 w-10 text-orange-500" />
+        <section className="bg-gray-100 py-20">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-16">
+                    <h2 className="text-4xl font-bold text-gray-900">Kako Funkcioniše?</h2>
+                    <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">Jednostavni koraci za uspešnu kupovinu i prodaju na našoj platformi.</p>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-xl p-10 md:p-16">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
+                        {/* Buyers Column */}
+                        <div>
+                            <h3 className="text-2xl font-bold text-center md:text-left mb-8 text-blue-700">Za Kupce</h3>
+                            <div className="flow-root">
+                                {buyerSteps.map((step, index) => (
+                                    <Step 
+                                        key={`buyer-${index}`}
+                                        icon={step.icon}
+                                        title={step.title}
+                                        description={step.description}
+                                        isLast={index === buyerSteps.length - 1}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                        <h3 className="text-xl font-bold mb-2">{step.title}</h3>
-                        <p className="text-gray-500">{step.description}</p>
+
+                        {/* Sellers Column */}
+                        <div>
+                            <h3 className="text-2xl font-bold text-center md:text-left mb-8 text-orange-600">Za Prodavce</h3>
+                            <div className="flow-root">
+                                {sellerSteps.map((step, index) => (
+                                     <Step 
+                                        key={`seller-${index}`}
+                                        icon={step.icon}
+                                        title={step.title}
+                                        description={step.description}
+                                        isLast={index === sellerSteps.length - 1}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                ))}
+                </div>
             </div>
         </section>
     );
 };
 
-const WhyChooseUsSection = () => (
-    <section className="bg-white py-20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-                <img src="https://picsum.photos/seed/chooseus/600/500" alt="Why choose us" className="rounded-xl shadow-2xl" />
-            </div>
-            <div>
-                <h2 className="text-3xl font-bold mb-6">Zašto Izabrati OglasiSrbija?</h2>
-                <ul className="space-y-6">
-                    <li className="flex items-start">
-                        <div className="bg-blue-100 rounded-full p-3 mr-4"><LayersIcon className="h-6 w-6 text-blue-600"/></div>
-                        <div>
-                            <h4 className="font-semibold text-lg">Ogroman Izbor</h4>
-                            <p className="text-gray-600">Pristupite hiljadama oglasa iz različitih kategorija širom Srbije.</p>
-                        </div>
-                    </li>
-                    <li className="flex items-start">
-                        <div className="bg-blue-100 rounded-full p-3 mr-4"><CursorArrowIcon className="h-6 w-6 text-blue-600"/></div>
-                        <div>
-                            <h4 className="font-semibold text-lg">Jednostavno za Korišćenje</h4>
-                            <p className="text-gray-600">Naš intuitivni interfejs čini postavljanje i pretragu oglasa lakim.</p>
-                        </div>
-                    </li>
-                    <li className="flex items-start">
-                        <div className="bg-blue-100 rounded-full p-3 mr-4"><MapPinIcon className="h-6 w-6 text-blue-600"/></div>
-                        <div>
-                            <h4 className="font-semibold text-lg">Lokalni Fokus</h4>
-                            <p className="text-gray-600">Povežite se sa kupcima i prodavcima u vašoj neposrednoj blizini.</p>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </section>
-);
-
-const TestimonialsSection = () => (
-    <section className="py-20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-center mb-12">Šta Naši Korisnici Kažu</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-white p-8 rounded-lg shadow-lg">
-                    <QuoteIcon className="h-8 w-8 text-blue-200 mb-4" />
-                    <p className="text-gray-600 mb-6">"Prodao sam auto za samo dva dana! Platforma je odlična i veoma laka za korišćenje."</p>
-                    <div className="flex items-center">
-                        <img src="https://i.pravatar.cc/150?u=milan" alt="Milan J." className="w-12 h-12 rounded-full mr-4" />
-                        <div>
-                            <p className="font-bold">Milan J.</p>
-                            <p className="text-sm text-gray-500">Beograd</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white p-8 rounded-lg shadow-lg">
-                    <QuoteIcon className="h-8 w-8 text-blue-200 mb-4" />
-                    <p className="text-gray-600 mb-6">"Pronašla sam savršen stan zahvaljujući detaljnim filterima. Preporučujem svima!"</p>
-                    <div className="flex items-center">
-                        <img src="https://i.pravatar.cc/150?u=ivana" alt="Ivana P." className="w-12 h-12 rounded-full mr-4" />
-                        <div>
-                            <p className="font-bold">Ivana P.</p>
-                            <p className="text-sm text-gray-500">Novi Sad</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white p-8 rounded-lg shadow-lg">
-                    <QuoteIcon className="h-8 w-8 text-blue-200 mb-4" />
-                    <p className="text-gray-600 mb-6">"Kao preduzetnik, redovno koristim OglasiSrbija za pronalaženje opreme. Odličan sajt."</p>
-                    <div className="flex items-center">
-                        <img src="https://i.pravatar.cc/150?u=dragan" alt="Dragan T." className="w-12 h-12 rounded-full mr-4" />
-                        <div>
-                            <p className="font-bold">Dragan T.</p>
-                            <p className="text-sm text-gray-500">Niš</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-);
-
-
 const CtaSection: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => (
-    <section className="bg-blue-600">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-            <h2 className="text-3xl font-extrabold text-white mb-4">Imate Nešto za Prodaju?</h2>
-            <p className="text-blue-100 text-lg max-w-2xl mx-auto mb-8">Postavite svoj oglas besplatno i doprite do hiljada potencijalnih kupaca širom Srbije.</p>
-            <button
-              onClick={() => onNavigate({ name: 'create' })}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-10 rounded-lg shadow-lg text-lg transition-all duration-300 transform hover:scale-105"
-            >
-              Postavi Oglas Sada
-            </button>
+    <section className="relative bg-gray-800">
+        <img 
+            src="https://picsum.photos/seed/cta-bg/1920/1080" 
+            alt="Post ad background"
+            className="absolute inset-0 w-full h-full object-cover opacity-20"
+        />
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <div className="max-w-3xl">
+                <h2 className="text-4xl font-extrabold text-white">Imate Nešto za Prodaju?</h2>
+                <p className="text-blue-100 text-lg mt-4 max-w-2xl">Postavite svoj oglas besplatno i doprite do hiljada potencijalnih kupaca širom Srbije. Brzo, lako i efikasno.</p>
+                <button
+                  onClick={() => onNavigate({ name: 'create' })}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-10 rounded-lg shadow-lg text-lg transition-all duration-300 transform hover:scale-105 mt-8"
+                >
+                  Postavi Oglas Sada
+                </button>
+            </div>
         </div>
     </section>
 );
@@ -182,59 +140,82 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, listings }) => {
     const [keyword, setKeyword] = useState('');
     const [location, setLocation] = useState('');
 
+    const keywordSuggestions = useMemo(() => {
+        const categoryNames = CATEGORIES.map(c => c.name);
+        const titleKeywords = new Set<string>();
+        listings.forEach(listing => {
+            listing.title.toLowerCase().split(' ').forEach(word => {
+                if (word.length > 3 && isNaN(parseInt(word))) {
+                    titleKeywords.add(word.replace(/[^a-z0-9]/gi, ''));
+                }
+            });
+        });
+        return [...new Set([...categoryNames, ...Array.from(titleKeywords)])];
+    }, [listings]);
+
+    const locationSuggestions = LOCATIONS;
+
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         const combinedSearchTerm = `${keyword} ${location}`.trim();
         onNavigate({ name: 'listings', filters: { searchTerm: combinedSearchTerm } });
     };
 
-    const latestListings = [...listings]
-      .sort((a, b) => new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime())
-      .slice(0, 4);
+    const latestListings = useMemo(() => 
+        [...listings]
+          .sort((a, b) => new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime())
+          .slice(0, 8),
+      [listings]);
       
-    const carListings = listings
-      .filter(l => l.category === 'automobili')
-      .slice(0, 4);
-      
-    const realEstateListings = listings
-      .filter(l => l.category === 'nekretnine')
-      .slice(0, 4);
+    const popularListings = useMemo(() => 
+        [...listings]
+          // Create a stable "popularity" sort based on price and ID
+          .sort((a, b) => (b.price % 1000 + b.id.charCodeAt(b.id.length - 1)) - (a.price % 1000 + a.id.charCodeAt(a.id.length - 1)))
+          .slice(0, 8),
+      [listings]);
 
     return (
     <div className="space-y-16 pb-16 bg-gray-50">
         {/* Hero Section */}
         <div className="relative">
             <section className="bg-gradient-to-br from-blue-600 to-blue-800 text-white pt-32 pb-40">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
                     <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 animate-fade-in-down">Pronađite sve što vam treba</h1>
                     <p className="text-lg md:text-xl text-blue-100 max-w-3xl mx-auto mb-8 animate-fade-in-up">Najveća platforma za oglase u Srbiji. Kupujte, prodajte, jednostavno i brzo.</p>
                      <form onSubmit={handleSearch} className="max-w-3xl mx-auto bg-white rounded-full shadow-2xl p-2 flex items-center transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500">
-                        <div className="flex items-center flex-1 pl-4">
-                            <SearchIcon className="h-6 w-6 text-gray-400 flex-shrink-0" />
-                            <input 
-                                type="text"
-                                value={keyword}
-                                onChange={(e) => setKeyword(e.target.value)}
-                                placeholder="Šta tražite?"
-                                className="w-full p-3 border-none text-gray-700 focus:ring-0 text-lg bg-transparent"
-                                aria-label="Pretraga po ključnoj reči"
-                            />
-                        </div>
-                        <div className="flex items-center flex-1 pl-4 border-l-2 border-gray-100">
-                            <MapPinIcon className="h-6 w-6 text-gray-400 flex-shrink-0" />
-                            <input 
-                                type="text"
-                                value={location}
-                                onChange={(e) => setLocation(e.target.value)}
-                                placeholder="Lokacija"
-                                className="w-full p-3 border-none text-gray-700 focus:ring-0 text-lg bg-transparent"
-                                aria-label="Pretraga po lokaciji"
-                            />
-                        </div>
+                        <SearchInputWithSuggestions
+                            value={keyword}
+                            onChange={setKeyword}
+                            placeholder="Šta tražite?"
+                            suggestions={keywordSuggestions}
+                            icon={<SearchIcon className="h-6 w-6 text-gray-400 flex-shrink-0" />}
+                            ariaLabel="Pretraga po ključnoj reči"
+                            inputClassName="w-full p-3 pl-12 border-none text-gray-700 focus:ring-0 text-lg bg-transparent"
+                            iconContainerClassName="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
+                        />
+                        <div className="border-l-2 border-gray-100 h-8 self-center"></div>
+                        <SearchInputWithSuggestions
+                            value={location}
+                            onChange={setLocation}
+                            placeholder="Lokacija"
+                            suggestions={locationSuggestions}
+                            icon={<MapPinIcon className="h-6 w-6 text-gray-400 flex-shrink-0" />}
+                            ariaLabel="Pretraga po lokaciji"
+                            inputClassName="w-full p-3 pl-12 border-none text-gray-700 focus:ring-0 text-lg bg-transparent"
+                            iconContainerClassName="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
+                        />
                         <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-full transition-colors duration-300 ml-2 flex-shrink-0">
                             Traži
                         </button>
                     </form>
+                    <div className="mt-8 max-w-lg mx-auto animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex items-center justify-center gap-x-4">
+                            <p className="text-blue-50">Imate nešto za prodaju?</p>
+                            <button onClick={() => onNavigate({ name: 'create' })} className="font-semibold bg-white text-blue-700 hover:bg-blue-50 py-2 px-5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white">
+                                Postavite oglas besplatno
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </section>
             <div className="absolute bottom-0 w-full">
@@ -273,34 +254,17 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, listings }) => {
             </div>
         </section>
         
-        {/* Car Listings Section */}
-        {carListings.length > 0 && (
+        {/* Popular Listings Section */}
+        {popularListings.length > 0 && (
             <section className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-3xl font-bold">Popularni Automobili</h2>
-                    <button onClick={() => onNavigate({name: 'listings', filters: { category: 'automobili' }})} className="text-blue-600 font-semibold hover:underline">
+                    <h2 className="text-3xl font-bold">Popularni Oglasi</h2>
+                    <button onClick={() => onNavigate({name: 'listings'})} className="text-blue-600 font-semibold hover:underline">
                         Pogledaj sve
                     </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {carListings.map(listing => (
-                        <ListingCard key={listing.id} listing={listing} onNavigate={onNavigate} />
-                    ))}
-                </div>
-            </section>
-        )}
-
-        {/* Real Estate Listings Section */}
-        {realEstateListings.length > 0 && (
-            <section className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-3xl font-bold">Aktuelno u Nekretninama</h2>
-                    <button onClick={() => onNavigate({name: 'listings', filters: { category: 'nekretnine' }})} className="text-blue-600 font-semibold hover:underline">
-                        Pogledaj sve
-                    </button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {realEstateListings.map(listing => (
+                    {popularListings.map(listing => (
                         <ListingCard key={listing.id} listing={listing} onNavigate={onNavigate} />
                     ))}
                 </div>
@@ -309,12 +273,6 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, listings }) => {
 
         {/* How It Works */}
         <HowItWorksSection />
-
-        {/* Why Choose Us */}
-        <WhyChooseUsSection />
-
-        {/* Testimonials */}
-        <TestimonialsSection />
 
         {/* CTA Section */}
         <CtaSection onNavigate={onNavigate} />

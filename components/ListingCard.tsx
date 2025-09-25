@@ -4,6 +4,8 @@ import React from 'react';
 import { Listing, Page } from '../types';
 import { TrashIcon } from './Icons';
 import { PLACEHOLDER_LISTING_IMAGE_URL } from '../constants';
+import { formatPrice, formatCondition } from '../utils/formatting';
+
 
 interface ListingCardProps {
   listing: Listing;
@@ -13,9 +15,6 @@ interface ListingCardProps {
 }
 
 const ListingCard: React.FC<ListingCardProps> = ({ listing, onNavigate, isOwner = false, onDelete }) => {
-  const formattedPrice = listing.price > 0 
-    ? new Intl.NumberFormat('de-DE').format(listing.price) + ` ${listing.currency}` 
-    : 'Po dogovoru';
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card's onClick from firing
@@ -25,6 +24,17 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onNavigate, isOwner 
   };
 
   const imageUrl = listing.images && listing.images.length > 0 ? listing.images[0] : PLACEHOLDER_LISTING_IMAGE_URL;
+
+  const getConditionLabel = () => {
+    if (listing.condition === 'used') {
+      if (listing.category === 'roba-i-proizvodi') return 'Korišćeno';
+      if (listing.category === 'nekretnine') return 'Starogradnja';
+      return 'Polovno';
+    }
+    return formatCondition(listing.condition, listing.category);
+  };
+  const conditionLabel = getConditionLabel();
+
 
   return (
     <div 
@@ -42,16 +52,18 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onNavigate, isOwner 
       )}
       <div className="relative h-48">
         <img src={imageUrl} alt={listing.title} className="w-full h-full object-cover" />
-        <span className="absolute top-2 left-2 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">{listing.location}</span>
+        {listing.location && <span className="absolute top-2 left-2 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">{listing.location}</span>}
       </div>
       <div className="p-4 flex flex-col flex-grow">
         <h3 className="text-lg font-semibold text-gray-800 truncate mb-1">{listing.title}</h3>
         <p className="text-sm text-gray-500 flex-grow mb-4">{listing.description.substring(0, 60)}...</p>
         <div className="flex justify-between items-center mt-auto">
-          <p className="text-xl font-bold text-orange-500">{formattedPrice}</p>
-          <span className={`text-xs font-bold px-2 py-1 rounded-full ${listing.condition === 'new' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-            {listing.condition === 'new' ? 'Novo' : 'Korišćeno'}
-          </span>
+          <p className="text-xl font-bold text-orange-500">{formatPrice(listing, true)}</p>
+          {conditionLabel && (
+             <span className={`text-xs font-bold px-2 py-1 rounded-full ${listing.condition === 'new' || listing.condition === 'new_build' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                {conditionLabel}
+            </span>
+          )}
         </div>
       </div>
     </div>
