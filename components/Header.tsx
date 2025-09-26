@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Page, User, Listing } from '../types';
-import { LogoIcon, PlusCircleIcon, MenuIcon, XIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, SearchIcon, MapPinIcon } from './Icons';
+import { LogoIcon, PlusCircleIcon, MenuIcon, XIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, SearchIcon, MapPinIcon, HeartIcon } from './Icons';
 import { PLACEHOLDER_AVATAR_URL, LOCATIONS, CATEGORIES } from '../constants';
 import SearchInputWithSuggestions from './SearchInputWithSuggestions';
 
@@ -10,9 +10,10 @@ interface HeaderProps {
   currentUser: User | null;
   onLogout: () => void;
   listings: Listing[];
+  favorites: string[];
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, onLogout, listings }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, onLogout, listings, favorites }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
@@ -167,6 +168,21 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
                 <PlusCircleIcon className="h-5 w-5"/>
                 <span>Postavi Oglas</span>
               </button>
+              
+              {!currentUser && (
+                <button
+                    onClick={() => onNavigate({ name: 'favorites' })}
+                    className="relative hidden md:block p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                    aria-label={`Omiljeni oglasi (${favorites.length})`}
+                >
+                    <HeartIcon className="h-6 w-6"/>
+                    {favorites.length > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold ring-2 ring-white">
+                            {favorites.length}
+                        </span>
+                    )}
+                </button>
+              )}
 
               {currentUser ? (
                 <div className="relative" ref={userMenuRef}>
@@ -185,6 +201,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
                     <div className="py-2">
                       <a href="#" onClick={(e) => { e.preventDefault(); onNavigate({ name: 'profile', userId: currentUser.id }); }} className="flex items-center gap-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
                         <UserCircleIcon className="h-5 w-5 text-gray-400" /> Moji Oglasi
+                      </a>
+                      <a href="#" onClick={(e) => { e.preventDefault(); onNavigate({ name: 'favorites' }); }} className="flex items-center gap-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+                        <HeartIcon className="h-5 w-5 text-gray-400" /> Moji Favoriti
                       </a>
                       <a href="#" className="flex items-center gap-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
                         <Cog6ToothIcon className="h-5 w-5 text-gray-400" /> Podešavanja
@@ -277,6 +296,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
 
               <div className="space-y-6 mb-8">
                   <NavLinks mobile={true} />
+                   <a
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); onNavigate({ name: 'favorites' }); }}
+                    className="text-2xl text-gray-800 font-semibold"
+                  >
+                    Omiljeni oglasi {favorites.length > 0 && `(${favorites.length})`}
+                  </a>
               </div>
 
               <div className="mt-auto space-y-4">

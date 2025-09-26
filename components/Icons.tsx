@@ -33,7 +33,10 @@ import {
   Check,
   Building2,
   Package,
-  PawPrint, // Added PawPrint icon
+  PawPrint,
+  Map,
+  List,
+  Heart, // Added Heart icon
   type LucideProps
 } from 'lucide-react';
 
@@ -51,7 +54,7 @@ export const RealEstateIcon = Home;
 export const JobIcon = Briefcase;
 export const ServiceIcon = Wrench;
 export const PackageIcon = Package;
-export const PawPrintIcon = PawPrint; // New icon for pets
+export const PawPrintIcon = PawPrint;
 export const PlusCircleIcon = PlusCircle;
 export const MenuIcon = Menu;
 export const XIcon = X;
@@ -79,3 +82,6 @@ export const CameraIcon = Camera;
 export const PencilIcon = Pencil;
 export const CheckIcon = Check;
 export const Building2Icon = Building2;
+export const MapIcon = Map;
+export const ListIcon = List;
+export const HeartIcon = Heart;

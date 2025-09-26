@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Listing, Page, User, Category } from '../types';
 import { CATEGORIES, PLACEHOLDER_LISTING_IMAGE_URL, PLACEHOLDER_AVATAR_URL } from '../constants';
-import { MapPinIcon, ChevronLeftIcon, ChevronRightIcon, PhoneIcon, EmailIcon, FlagIcon, UserCircleIcon, CheckIcon } from '../components/Icons';
+import { MapPinIcon, ChevronLeftIcon, ChevronRightIcon, PhoneIcon, EmailIcon, FlagIcon, HeartIcon, CheckIcon } from '../components/Icons';
 import ListingCard from '../components/ListingCard';
 import { addReport } from '../data/reports';
 import { formatPrice, formatCondition, formatAddress } from '../utils/formatting';
@@ -11,9 +11,12 @@ interface ListingDetailPageProps {
   onNavigate: (page: Page) => void;
   listings: Listing[];
   currentUser: User | null;
+  favorites: string[];
+  onToggleFavorite: (listingId: string) => void;
+  onDeleteListing: (listingId: string) => void;
 }
 
-const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNavigate, listings, currentUser }) => {
+const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNavigate, listings, currentUser, favorites, onToggleFavorite, onDeleteListing }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -23,6 +26,8 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNaviga
   const similarListings = listings
     .filter(l => l.category === listing.category && l.id !== listing.id)
     .slice(0, 4);
+    
+  const isFavorite = favorites.includes(listing.id);
 
   const handleNextImage = () => {
     setActiveImageIndex((prevIndex) => (prevIndex + 1) % listing.images.length);
@@ -77,7 +82,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNaviga
             {/* Listing Details */}
             <div className="bg-white rounded-xl shadow-lg p-8">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                  <div>
+                  <div className="flex-grow">
                     <div className="flex items-center gap-x-4">
                       {category && <p className="font-semibold text-blue-600">{category.name}</p>}
                       {listing.condition && (
@@ -86,7 +91,22 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNaviga
                          </span>
                       )}
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900 mt-2">{listing.title}</h1>
+                    <div className="flex justify-between items-start">
+                      <h1 className="text-3xl font-bold text-gray-900 mt-2 flex-grow">{listing.title}</h1>
+                      <button
+                          onClick={() => onToggleFavorite(listing.id)}
+                          className={`flex-shrink-0 ml-4 mt-2 flex items-center gap-x-2 border rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                            isFavorite 
+                              ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
+                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                          aria-label={isFavorite ? 'Ukloni iz omiljenih' : 'Dodaj u omiljene'}
+                      >
+                          <HeartIcon className={`h-5 w-5 transition-colors ${isFavorite ? 'fill-current' : ''}`} />
+                          <span>{isFavorite ? 'Sačuvano' : 'Sačuvaj'}</span>
+                      </button>
+                    </div>
+
                     {listing.location && (
                       <div className="flex items-center text-gray-500 mt-2">
                         <MapPinIcon className="h-5 w-5 mr-1" />
@@ -94,8 +114,10 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNaviga
                       </div>
                     )}
                   </div>
-                  <p className="text-3xl font-extrabold text-orange-500 flex-shrink-0 self-start sm:self-auto sm:pt-12">{formatPrice(listing)}</p>
               </div>
+               <div className="mt-6 border-t pt-6 flex justify-end">
+                 <p className="text-4xl font-extrabold text-orange-500">{formatPrice(listing)}</p>
+               </div>
               <div className="mt-6 border-t pt-6">
                 <h2 className="text-xl font-bold text-gray-800 mb-4">Opis</h2>
                 <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{listing.description}</p>
@@ -163,7 +185,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listing, onNaviga
           <div className="mt-16">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Slični Oglasi</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {similarListings.map(l => <ListingCard key={l.id} listing={l} onNavigate={onNavigate} />)}
+              {similarListings.map(l => <ListingCard key={l.id} listing={l} onNavigate={onNavigate} isFavorite={favorites.includes(l.id)} onToggleFavorite={onToggleFavorite} isOwner={currentUser?.id === l.seller.id} onDelete={onDeleteListing} />)}
             </div>
           </div>
         )}

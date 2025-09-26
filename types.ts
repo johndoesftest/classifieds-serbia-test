@@ -10,6 +10,7 @@ export type Page =
   | { name: 'register'; redirectPage?: Page }
   | { name: 'profile'; userId: string }
   | { name: 'about' }
+  | { name: 'favorites' }
   | { name: 'forgot-password' }
   | { name: 'reset-password'; token: string };
 

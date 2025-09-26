@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Page, Category, Listing } from '../types';
+import { Page, Category, Listing, User } from '../types';
 import { CATEGORIES, LOCATIONS } from '../constants';
 import ListingCard from '../components/ListingCard';
+import ListingCardSkeleton from '../components/ListingCardSkeleton';
 import { 
     SearchIcon, 
     ChatBubbleIcon, 
@@ -14,6 +15,11 @@ import SearchInputWithSuggestions from '../components/SearchInputWithSuggestions
 interface HomePageProps {
   onNavigate: (page: Page) => void;
   listings: Listing[];
+  favorites: string[];
+  onToggleFavorite: (listingId: string) => void;
+  currentUser: User | null;
+  onDeleteListing: (listingId: string) => void;
+  isLoading: boolean;
 }
 
 const CategoryCard: React.FC<{ category: Category; onClick: () => void }> = ({ category, onClick }) => (
@@ -136,7 +142,7 @@ const CtaSection: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate
 );
 
 
-const HomePage: React.FC<HomePageProps> = ({ onNavigate, listings }) => {
+const HomePage: React.FC<HomePageProps> = ({ onNavigate, listings, favorites, onToggleFavorite, currentUser, onDeleteListing, isLoading }) => {
     const [keyword, setKeyword] = useState('');
     const [location, setLocation] = useState('');
 
@@ -248,9 +254,21 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, listings }) => {
                 </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                {latestListings.map(listing => (
-                    <ListingCard key={listing.id} listing={listing} onNavigate={onNavigate} />
-                ))}
+                {isLoading ? (
+                     Array.from({ length: 8 }).map((_, index) => <ListingCardSkeleton key={index} />)
+                ) : (
+                    latestListings.map(listing => (
+                        <ListingCard 
+                            key={listing.id} 
+                            listing={listing} 
+                            onNavigate={onNavigate} 
+                            isFavorite={favorites.includes(listing.id)} 
+                            onToggleFavorite={onToggleFavorite} 
+                            isOwner={currentUser?.id === listing.seller.id} 
+                            onDelete={onDeleteListing} 
+                        />
+                    ))
+                )}
             </div>
         </section>
         
@@ -264,9 +282,21 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, listings }) => {
                     </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {popularListings.map(listing => (
-                        <ListingCard key={listing.id} listing={listing} onNavigate={onNavigate} />
-                    ))}
+                     {isLoading ? (
+                        Array.from({ length: 8 }).map((_, index) => <ListingCardSkeleton key={index} />)
+                     ) : (
+                        popularListings.map(listing => (
+                            <ListingCard 
+                                key={listing.id} 
+                                listing={listing} 
+                                onNavigate={onNavigate} 
+                                isFavorite={favorites.includes(listing.id)} 
+                                onToggleFavorite={onToggleFavorite} 
+                                isOwner={currentUser?.id === listing.seller.id} 
+                                onDelete={onDeleteListing} 
+                            />
+                        ))
+                     )}
                 </div>
             </section>
         )}

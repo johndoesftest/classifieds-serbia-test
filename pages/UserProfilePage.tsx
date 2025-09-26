@@ -5,7 +5,7 @@ import { updateCurrentUser } from '../services/authService';
 import ListingCard from '../components/ListingCard';
 import Spinner from '../components/Spinner';
 import { PLACEHOLDER_AVATAR_URL } from '../constants';
-import { EmailIcon, PhoneIcon, PencilIcon, CheckIcon, XIcon, UserCircleIcon, Building2Icon, SparklesIcon } from '../components/Icons';
+import { EmailIcon, PhoneIcon, PencilIcon, CheckIcon, XIcon, UserCircleIcon, Building2Icon, SparklesIcon, HeartIcon } from '../components/Icons';
 
 interface UserProfilePageProps {
   userId: string;
@@ -14,9 +14,11 @@ interface UserProfilePageProps {
   onNavigate: (page: Page) => void;
   onUpdateUser: (user: User) => void;
   onDeleteListing: (listingId: string) => void;
+  favorites: string[];
+  onToggleFavorite: (listingId: string) => void;
 }
 
-const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, currentUser, listings, onNavigate, onUpdateUser, onDeleteListing }) => {
+const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, currentUser, listings, onNavigate, onUpdateUser, onDeleteListing, favorites, onToggleFavorite }) => {
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [userListings, setUserListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,9 +31,17 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, currentUser, 
   const [isConverting, setIsConverting] = useState(false);
   const [businessName, setBusinessName] = useState('');
   const [businessDescription, setBusinessDescription] = useState('');
+  
+  const [activeTab, setActiveTab] = useState<'listings' | 'favorites'>('listings');
 
 
   const isOwnProfile = useMemo(() => currentUser?.id === userId, [currentUser, userId]);
+  
+  const favoriteListings = useMemo(() => 
+    isOwnProfile ? listings.filter(l => favorites.includes(l.id))
+      .sort((a, b) => new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime()) : [],
+  [listings, favorites, isOwnProfile]);
+
 
   useEffect(() => {
     setIsLoading(true);
@@ -106,6 +116,13 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, currentUser, 
 
   const isBusinessProfile = profileUser.accountType === 'business';
   const formInputClasses = "block w-full rounded-lg border border-gray-300 py-3 px-4 text-gray-800 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors duration-150";
+  
+  const tabClasses = (isActive: boolean) => 
+    `flex items-center gap-x-2 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition-colors ${
+        isActive
+        ? 'border-blue-500 text-blue-600'
+        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+    }`;
 
 
   return (
@@ -240,37 +257,85 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, currentUser, 
         )}
 
         <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-              {isOwnProfile ? 'Moji Oglasi' : `Svi oglasi`} ({userListings.length})
-          </h2>
-          {userListings.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {userListings.map(listing => (
-                <ListingCard 
-                  key={listing.id} 
-                  listing={listing} 
-                  onNavigate={onNavigate} 
-                  isOwner={isOwnProfile}
-                  onDelete={onDeleteListing}
-                />
-              ))}
+            <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                    <button onClick={() => setActiveTab('listings')} className={tabClasses(activeTab === 'listings')}>
+                         <UserCircleIcon className="h-5 w-5" />
+                         <span>{isOwnProfile ? 'Moji Oglasi' : 'Oglasi'} ({userListings.length})</span>
+                    </button>
+                    {isOwnProfile && (
+                         <button onClick={() => setActiveTab('favorites')} className={tabClasses(activeTab === 'favorites')}>
+                            <HeartIcon className="h-5 w-5" />
+                            <span>Omiljeni Oglasi ({favoriteListings.length})</span>
+                         </button>
+                    )}
+                </nav>
             </div>
-          ) : (
-            <div className="text-center py-16 bg-white rounded-lg shadow">
-              <UserCircleIcon className="mx-auto h-12 w-12 text-gray-300" />
-              <h3 className="mt-2 text-xl font-medium text-gray-900">Nema objavljenih oglasa</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                  {isOwnProfile ? "Još uvek niste postavili nijedan oglas." : "Ovaj korisnik trenutno nema aktivnih oglasa."}
-              </p>
-              {isOwnProfile && (
-                  <div className="mt-6">
-                      <button onClick={() => onNavigate({ name: 'create' })} className="font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md">
-                          Postavi prvi oglas
-                      </button>
-                  </div>
-              )}
+
+            <div className="mt-8">
+                {activeTab === 'listings' && (
+                    <>
+                        {userListings.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {userListings.map(listing => (
+                            <ListingCard 
+                                key={listing.id} 
+                                listing={listing} 
+                                onNavigate={onNavigate} 
+                                isOwner={isOwnProfile}
+                                onDelete={onDeleteListing}
+                                isFavorite={favorites.includes(listing.id)}
+                                onToggleFavorite={onToggleFavorite}
+                            />
+                            ))}
+                        </div>
+                        ) : (
+                        <div className="text-center py-16 bg-white rounded-lg shadow">
+                            <UserCircleIcon className="mx-auto h-12 w-12 text-gray-300" />
+                            <h3 className="mt-2 text-xl font-medium text-gray-900">Nema objavljenih oglasa</h3>
+                            <p className="mt-1 text-sm text-gray-500">
+                                {isOwnProfile ? "Još uvek niste postavili nijedan oglas." : "Ovaj korisnik trenutno nema aktivnih oglasa."}
+                            </p>
+                            {isOwnProfile && (
+                                <div className="mt-6">
+                                    <button onClick={() => onNavigate({ name: 'create' })} className="font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md">
+                                        Postavi prvi oglas
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        )}
+                    </>
+                )}
+
+                {activeTab === 'favorites' && isOwnProfile && (
+                    <>
+                        {favoriteListings.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {favoriteListings.map(listing => (
+                            <ListingCard 
+                                key={listing.id} 
+                                listing={listing} 
+                                onNavigate={onNavigate} 
+                                isFavorite={true}
+                                onToggleFavorite={onToggleFavorite}
+                                isOwner={currentUser?.id === listing.seller.id}
+                                onDelete={onDeleteListing}
+                            />
+                            ))}
+                        </div>
+                        ) : (
+                        <div className="text-center py-16 bg-white rounded-lg shadow">
+                            <HeartIcon className="mx-auto h-12 w-12 text-gray-300" />
+                            <h3 className="mt-2 text-xl font-medium text-gray-900">Nemate omiljenih oglasa</h3>
+                            <p className="mt-1 text-sm text-gray-500">
+                                Kliknite na srce na oglasu da biste ga sačuvali ovde.
+                            </p>
+                        </div>
+                        )}
+                    </>
+                )}
             </div>
-          )}
         </div>
       </div>
       
