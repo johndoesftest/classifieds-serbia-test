@@ -4,6 +4,7 @@ import { FilterState } from '../types';
 import LocationFilter from './LocationFilter';
 import { SearchIcon } from './Icons';
 import { CATEGORY_FORM_CONFIG, ConditionOption } from '../data/categoryFormConfig';
+import { CATEGORY_SPECIFIC_FIELDS } from '../data/categorySpecificFields';
 
 
 interface FilterSidebarProps {
@@ -24,21 +25,37 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange, 
   const [conditionOptions, setConditionOptions] = useState<ConditionOption[]>(CATEGORY_FORM_CONFIG.default.conditionOptions!);
 
   const categoryConfig = filters.category ? CATEGORY_FORM_CONFIG[filters.category] : CATEGORY_FORM_CONFIG.default;
+  const specificFields = filters.category ? (CATEGORY_SPECIFIC_FIELDS[filters.category] || []) : [];
 
   useEffect(() => {
       setConditionOptions(categoryConfig?.conditionOptions || []);
-      // If the current condition is not valid for the new category, reset it
-      if (categoryConfig && !categoryConfig.showCondition) {
-          onFilterChange({ ...filters, condition: '' });
-      }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.category]);
+  }, [filters.category, categoryConfig]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    if (name === 'category') {
+        onFilterChange({
+            ...filters,
+            category: value,
+            specifics: {},
+            condition: ''
+        });
+    } else {
+        onFilterChange({
+            ...filters,
+            [name]: value
+        });
+    }
+  };
+
+  const handleSpecificsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     onFilterChange({
       ...filters,
-      [e.target.name]: e.target.value
+      specifics: {
+        ...filters.specifics,
+        [e.target.name]: e.target.value,
+      },
     });
   };
 
@@ -118,6 +135,48 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange, 
             />
           </div>
         </FilterSection>
+
+        {specificFields.map(field => {
+            if (field.name === 'address') return null; // Address is handled by location filter
+            return (
+                <FilterSection key={field.name} title={field.label}>
+                    {field.type === 'select' && (
+                        <select name={field.name} value={filters.specifics[field.name] || ''} onChange={handleSpecificsChange} className={inputClasses}>
+                            <option value="">Sve</option>
+                            {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                    )}
+                    {field.type === 'text' && (
+                        <input
+                            type="text"
+                            name={field.name}
+                            value={filters.specifics[field.name] || ''}
+                            onChange={handleSpecificsChange}
+                            placeholder={field.placeholder || field.label}
+                            className={inputClasses}
+                        />
+                    )}
+                    {field.type === 'number' && (
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="number"
+                                name={`${field.name}_min`}
+                                value={filters.specifics[`${field.name}_min`] || ''}
+                                onChange={handleSpecificsChange}
+                                placeholder="Od"
+                                className={inputClasses} />
+                            <span className="text-gray-400">-</span>
+                            <input type="number"
+                                name={`${field.name}_max`}
+                                value={filters.specifics[`${field.name}_max`] || ''}
+                                onChange={handleSpecificsChange}
+                                placeholder="Do"
+                                className={inputClasses} />
+                        </div>
+                    )}
+                </FilterSection>
+            )
+        })}
 
         {categoryConfig?.showCondition && (
           <FilterSection title="Stanje">

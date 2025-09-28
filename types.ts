@@ -51,6 +51,7 @@ export interface FilterState {
   minPrice: string;
   maxPrice: string;
   condition: string;
+  specifics: Record<string, any>;
 }
 
 // Defines a category for listings

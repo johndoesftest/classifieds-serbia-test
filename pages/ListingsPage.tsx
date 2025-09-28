@@ -6,6 +6,7 @@ import ListingCardSkeleton from '../components/ListingCardSkeleton';
 import Pagination from '../components/Pagination';
 import MapComponent from '../components/MapComponent';
 import { ListIcon, MapIcon } from '../components/Icons';
+import { CATEGORY_SPECIFIC_FIELDS } from '../data/categorySpecificFields';
 
 interface ListingsPageProps {
   onNavigate: (page: Page) => void;
@@ -24,6 +25,7 @@ const initialFilterState: FilterState = {
   minPrice: '',
   maxPrice: '',
   condition: '',
+  specifics: {},
 };
 
 const LISTINGS_PER_PAGE = 9;
@@ -102,7 +104,39 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ onNavigate, initialFilters,
         }
       }
 
-      return searchTermMatch && categoryMatch && locationMatch && conditionMatch && priceMatch;
+      const specificsMatch = (() => {
+        const activeSpecificFilters = Object.entries(filters.specifics).filter(([, val]) => val !== '' && val !== undefined && val !== null);
+        if (activeSpecificFilters.length === 0) return true;
+
+        if (!listing.specifics) return false;
+
+        return activeSpecificFilters.every(([key, value]) => {
+            const fieldName = key.replace(/_min$|_max$/, '');
+            const listingValue = listing.specifics![fieldName];
+
+            if (listingValue === undefined || listingValue === null) return false;
+
+            if (key.endsWith('_min')) {
+                const numListingValue = parseFloat(String(listingValue));
+                const numFilterValue = parseFloat(String(value));
+                return !isNaN(numListingValue) && !isNaN(numFilterValue) && numListingValue >= numFilterValue;
+            }
+
+            if (key.endsWith('_max')) {
+                const numListingValue = parseFloat(String(listingValue));
+                const numFilterValue = parseFloat(String(value));
+                return !isNaN(numListingValue) && !isNaN(numFilterValue) && numListingValue <= numFilterValue;
+            }
+
+            const stringListingValue = String(listingValue).toLowerCase();
+            const stringFilterValue = String(value).toLowerCase();
+            const fieldConfig = CATEGORY_SPECIFIC_FIELDS[filters.category]?.find(f => f.name === key);
+            
+            return fieldConfig?.type === 'text' ? stringListingValue.includes(stringFilterValue) : stringListingValue === stringFilterValue;
+        });
+      })();
+
+      return searchTermMatch && categoryMatch && locationMatch && conditionMatch && priceMatch && specificsMatch;
     });
 
     // Sorting

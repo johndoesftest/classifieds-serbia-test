@@ -22,14 +22,46 @@ interface MapComponentProps {
 const MapComponent: React.FC<MapComponentProps> = ({ listings, onNavigate }) => {
   const mapRef = useRef<L.Map>(null);
 
-  // When the map is shown (e.g., toggled from list view), its container might have
-  // been resized. This effect ensures the map tiles render correctly.
   useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Invalidate map size on initial render and when view becomes visible
     const timer = setTimeout(() => {
-      mapRef.current?.invalidateSize();
-    }, 100); // Small delay to ensure container is visible
-    return () => clearTimeout(timer);
-  }, []);
+      map.invalidateSize();
+    }, 100);
+
+    const onPopupOpen = (e: L.PopupEvent) => {
+      const popup = e.popup;
+      const latlng = popup.getLatLng();
+      if (!latlng) return;
+
+      const popupHeight = popup.getElement()?.clientHeight || 0;
+      // Offset to position the marker slightly above the center, making room for the popup
+      const yOffset = popupHeight / 2;
+
+      // Get current screen coordinates
+      const markerPoint = map.latLngToContainerPoint(latlng);
+      const mapCenterPoint = map.getSize().divideBy(2);
+
+      // Calculate the target screen point for the marker
+      const targetPoint = mapCenterPoint.subtract([0, yOffset]);
+      
+      // Calculate the pixel difference to pan by
+      const panByAmount = markerPoint.subtract(targetPoint);
+      
+      map.panBy(panByAmount, { animate: true });
+    };
+
+    map.on('popupopen', onPopupOpen);
+
+    return () => {
+      clearTimeout(timer);
+      if (map) {
+        map.off('popupopen', onPopupOpen);
+      }
+    };
+  }, []); // Empty dependency array means this runs once on mount
 
   const listingsWithCoords = listings
     .map(listing => {
@@ -57,7 +89,10 @@ const MapComponent: React.FC<MapComponentProps> = ({ listings, onNavigate }) => 
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             {listingsWithCoords.map(listing => (
-                <Marker key={listing.id} position={listing.coords}>
+                <Marker 
+                  key={listing.id} 
+                  position={listing.coords}
+                >
                     <Popup minWidth={256}>
                         <MapPopupCard listing={listing} onNavigate={onNavigate} />
                     </Popup>
