@@ -131,29 +131,38 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
             {/* Center Group: Search Bar */}
             <div className="flex-1 flex justify-center items-center px-4 sm:px-6 lg:px-8">
                 {currentPage.name !== 'home' && (
-                  <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-full max-w-xl">
-                    <div className="flex items-center bg-gray-100 rounded-full transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500">
-                        <SearchInputWithSuggestions
-                            value={keyword}
-                            onChange={setKeyword}
-                            placeholder="Šta tražite?"
-                            suggestions={keywordSuggestions}
-                            icon={<SearchIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />}
-                            ariaLabel="Pretraga po ključnoj reči"
-                            inputClassName="w-full p-2.5 pl-11 border-none text-gray-700 focus:ring-0 text-sm bg-transparent"
-                            iconContainerClassName="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
-                        />
-                        <div className="border-l border-gray-200 h-6"></div>
-                        <SearchInputWithSuggestions
-                            value={location}
-                            onChange={setLocation}
-                            placeholder="Lokacija"
-                            suggestions={locationSuggestions}
-                            icon={<MapPinIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />}
-                            ariaLabel="Pretraga po lokaciji"
-                            inputClassName="w-full p-2.5 pl-11 border-none text-gray-700 focus:ring-0 text-sm bg-transparent"
-                            iconContainerClassName="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
-                        />
+                  <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-full max-w-2xl">
+                    <div className="flex items-center w-full h-14 bg-gray-50 rounded-full border border-gray-200/80 shadow-sm transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent focus-within:bg-white">
+                        <div className="flex-1 h-full">
+                           <SearchInputWithSuggestions
+                                value={keyword}
+                                onChange={setKeyword}
+                                placeholder="Šta tražite?"
+                                suggestions={keywordSuggestions}
+                                icon={<SearchIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
+                                ariaLabel="Pretraga po ključnoj reči"
+                                inputClassName="w-full h-full p-0 pl-12 pr-4 border-none text-gray-800 focus:ring-0 text-base bg-transparent"
+                                iconContainerClassName="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none"
+                            />
+                       </div>
+                        <div className="border-l border-gray-200 h-7 self-center"></div>
+                        <div className="flex-1 h-full">
+                            <SearchInputWithSuggestions
+                                value={location}
+                                onChange={setLocation}
+                                placeholder="Lokacija"
+                                suggestions={locationSuggestions}
+                                icon={<MapPinIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
+                                ariaLabel="Pretraga po lokaciji"
+                                inputClassName="w-full h-full p-0 pl-12 pr-4 border-none text-gray-800 focus:ring-0 text-base bg-transparent"
+                                iconContainerClassName="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none"
+                            />
+                        </div>
+                         <div className="pr-2 flex-shrink-0">
+                            <button type="submit" aria-label="Pretraži" className="h-10 w-10 flex items-center justify-center bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors duration-200">
+                                <SearchIcon className="h-5 w-5" />
+                            </button>
+                        </div>
                     </div>
                   </form>
                 )}
