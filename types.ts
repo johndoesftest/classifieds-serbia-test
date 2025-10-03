@@ -68,3 +68,13 @@ export interface Report {
     reason: string;
     reportedAt: string; // ISO date string
 }
+
+// Defines a message sent between users for a listing
+export interface Message {
+    id: string;
+    listingId: string;
+    senderId: string; // User.id
+    receiverId: string; // User.id
+    content: string;
+    sentAt: string; // ISO date string
+}

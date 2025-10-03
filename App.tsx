@@ -52,6 +52,12 @@ function App() {
     handleNavigate(redirectPage);
   };
 
+  const handleAuthSuccessInPlace = (user: User) => {
+    favoritesService.mergeGuestFavorites(user.id);
+    setCurrentUser(user);
+    // No navigation, user stays on the current page.
+  };
+
   const handleLogout = () => {
     logout();
     setCurrentUser(null);
@@ -97,7 +103,7 @@ function App() {
         return <ListingsPage onNavigate={handleNavigate} listings={listings} initialFilters={currentPage.filters} favorites={favorites} onToggleFavorite={handleToggleFavorite} currentUser={currentUser} onDeleteListing={handleDeleteListing} />;
       case 'detail':
         const listing = listings.find(l => l.id === currentPage.id);
-        return listing ? <ListingDetailPage listing={listing} onNavigate={handleNavigate} listings={listings} currentUser={currentUser} favorites={favorites} onToggleFavorite={handleToggleFavorite} onDeleteListing={handleDeleteListing} /> : <div>Oglas nije pronađen.</div>;
+        return listing ? <ListingDetailPage listing={listing} onNavigate={handleNavigate} listings={listings} currentUser={currentUser} favorites={favorites} onToggleFavorite={handleToggleFavorite} onDeleteListing={handleDeleteListing} onAuthSuccess={handleAuthSuccessInPlace} /> : <div>Oglas nije pronađen.</div>;
       case 'create':
          return <CreateListingPage onNavigate={handleNavigate} currentUser={currentUser} onAddListing={handleAddListing} onAuthSuccess={handleLogin} onUpdateUser={handleUpdateUser}/>;
       case 'login':
