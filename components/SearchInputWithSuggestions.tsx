@@ -102,8 +102,8 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
   `;
 
   return (
-    <div className="relative flex-1" ref={wrapperRef}>
-      <div className="flex items-center w-full">
+    <div className="relative flex-1 h-full" ref={wrapperRef}>
+      <div className="flex items-center w-full h-full">
         <div className={iconContainerClassName}>
           {icon}
         </div>

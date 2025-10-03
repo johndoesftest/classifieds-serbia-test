@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Page, User, Listing } from '../types';
 import { LogoIcon, PlusCircleIcon, MenuIcon, XIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, SearchIcon, MapPinIcon, HeartIcon } from './Icons';
@@ -90,7 +92,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
   const NavLinks: React.FC<{ mobile?: boolean }> = ({ mobile = false }) => (
     <nav className={mobile 
         ? 'flex flex-col items-start space-y-2' 
-        : 'hidden md:flex items-center space-x-2 bg-gray-100/50 p-1 rounded-full'
+        : 'hidden md:flex items-center space-x-2 bg-gray-100/50 p-2 rounded-full'
     }>
       <a
         href="#"
@@ -129,11 +131,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
             </div>
 
             {/* Center Group: Search Bar */}
-            <div className="flex-1 flex justify-center items-center px-4 sm:px-6 lg:px-8">
+            <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
                 {currentPage.name !== 'home' && (
                   <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-full max-w-2xl">
                     <div className="flex items-center w-full h-14 bg-gray-50 rounded-full border border-gray-200/80 shadow-sm transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent focus-within:bg-white">
-                        <div className="flex-1 h-full">
+                        <div className="flex-1 h-full flex">
                            <SearchInputWithSuggestions
                                 value={keyword}
                                 onChange={setKeyword}
@@ -146,7 +148,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage, currentUser, o
                             />
                        </div>
                         <div className="border-l border-gray-200 h-7 self-center"></div>
-                        <div className="flex-1 h-full">
+                        <div className="flex-1 h-full flex">
                             <SearchInputWithSuggestions
                                 value={location}
                                 onChange={setLocation}
